@@ -6,7 +6,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
 from tensorflow.keras.optimizers import Adam
 from collections import deque
-from evol_game import evol_env
+from .evol_game import evol_env
 import random
 import numpy as np 
 from tqdm import tqdm

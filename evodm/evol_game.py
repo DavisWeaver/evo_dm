@@ -1,4 +1,4 @@
-from landscapes import *
+from .landscapes import Landscape
 import numpy as np
 import math
 # Functions to convert data describing bacterial evolution sim into a format

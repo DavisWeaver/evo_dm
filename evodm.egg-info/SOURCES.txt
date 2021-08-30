@@ -1,0 +1,15 @@
+README.txt
+setup.py
+evodm/__init__.py
+evodm/evol_game.py
+evodm/landscapes.py
+evodm/learner.Py
+evodm.egg-info/PKG-INFO
+evodm.egg-info/SOURCES.txt
+evodm.egg-info/dependency_links.txt
+evodm.egg-info/requires.txt
+evodm.egg-info/top_level.txt
+evodm/test/__init__.py
+evodm/test/test_evol_game.py
+evodm/test/test_landscapes.py
+evodm/test/test_learner.py

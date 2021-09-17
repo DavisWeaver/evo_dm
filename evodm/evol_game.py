@@ -1,4 +1,4 @@
-from .landscapes import Landscape
+from evodm import Landscape
 import numpy as np
 import math
 # Functions to convert data describing bacterial evolution sim into a format
@@ -15,7 +15,7 @@ class evol_env:
     #train input determines whether the sensor records the state vector or
     #the previous fitnesses
     def __init__(self, N = 5, sigma = 0.5, correl = np.linspace(-1.0,1.0,51),
-                        phenom = 0, num_landscapes = 40,
+                        phenom = 0,
                         train_input = "state_vector", num_evols = 1,
                         random_start = False, 
                         num_drugs = 4, 
@@ -39,6 +39,7 @@ class evol_env:
         #define actions  
         self.ACTIONS = [i for i in range(1, num_drugs + 1)] # action space - added the plus one because I decided to use 1 indexing for the actions for no good reason a while ago
         self.action = 1 #first action - value will be updated by the learner
+        self.prev_action = 1 #pretend this is the second time seeing it why not
 
         #data structure for containing information the agent queries from the environment.
         # the format is: [previous_fitness, current_action, reward, next_fitness]
@@ -92,14 +93,12 @@ class evol_env:
 
         ##Define initial fitness
         self.fitness = [np.dot(self.drugs[self.action-1], self.state_vector)]
-        #take the first action - initializing the fitness vector
-        self.step()
-
+        
         #Define the environment shape
         if self.TRAIN_INPUT == "state_vector":
             self.ENVIRONMENT_SHAPE = (len(self.state_vector),1)
         elif self.TRAIN_INPUT == "fitness":
-            self.ENVIRONMENT_SHAPE = (self.NUM_EVOLS, 1)
+            self.ENVIRONMENT_SHAPE = (1 + self.NUM_EVOLS, 1)
         elif self.TRAIN_INPUT == "pop_size":
             self.ENVIRONMENT_SHAPE = (self.NUM_OBS, 1)
         else:
@@ -130,7 +129,7 @@ class evol_env:
             if self.TRAIN_INPUT == "state_vector":
                 self.sensor = [self.state_vector, self.action, self.calc_reward(fitness = fitness), state_vector]
             elif self.TRAIN_INPUT == "fitness":
-                self.sensor= [self.fitness, self.action, self.calc_reward(fitness = fitness), fitness]
+                self.sensor= [np.array([self.action, self.fitness]), self.action, self.calc_reward(fitness = fitness), fitness]
             elif self.TRAIN_INPUT == "pop_size":
                 self.sensor= [self.pop_size, self.action, self.calc_reward(fitness = fitness), pop_size]
             else:
@@ -148,6 +147,9 @@ class evol_env:
         self.fitness = fitness
         #update the current state vector
         self.state_vector = state_vector
+
+        #update action-1
+        self.prev_action = self.action
 
         #done
         return
@@ -226,8 +228,9 @@ class evol_env:
         self.pop_wcount = 0
         self.player_wcount = 0
         self.done = False
-        #take the first action - re-initializing the fitness vector
-        self.step()
+        #re-calculate fitness with the new state_vector
+        self.fitness = [np.dot(self.drugs[self.action-1], self.state_vector)]
+        
 
 #helper function for generating the od_dist
 def s_solve(y):

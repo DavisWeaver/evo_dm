@@ -19,9 +19,6 @@ from copy import deepcopy
 class hyperparameters:
 
     def __init__(self):
-        # Name the model
-        self.MODEL_NAME = "Conv_256x1_Dense_56x2"
-
         # Model training settings
         self.REPLAY_MEMORY_SIZE = 5000
         self.MIN_REPLAY_MEMORY_SIZE = 500
@@ -34,6 +31,7 @@ class hyperparameters:
         self.epsilon = 1  # lowercase because its not a constant
         self.EPSILON_DECAY = 0.95
         self.MIN_EPSILON = 0.001
+        self.LEARNING_RATE = 0.001
 
         # settings control the evolutionary simulation
         self.NUM_EVOLS = 1 # how many evolutionary steps per time step
@@ -120,7 +118,7 @@ class DrugSelector:
         model.add(Flatten())
         model.add(Dense(128))
         model.add(Dense(len(self.env.ACTIONS), activation="linear"))
-        model.compile(loss="mse", optimizer=Adam(learning_rate=0.001), metrics=['accuracy'])
+        model.compile(loss="mse", optimizer=Adam(learning_rate=self.hp.LEARNING_RATE), metrics=['accuracy'])
         return model
 
     def update_replay_memory(self):
@@ -143,6 +141,7 @@ class DrugSelector:
         return 
 
       # Trains main network every step during episode
+      #gonna chunk this out so I can actually test it
     def train(self):
 
         # Start training only if certain number of samples is already saved
@@ -152,28 +151,30 @@ class DrugSelector:
         # Get a minibatch of random samples from memory replay table
         minibatch = random.sample(self.replay_memory, self.hp.MINIBATCH_SIZE)
 
-        # Get current states from minibatch, then query NN model for Q values
-        current_states = np.array([transition[0] for transition in minibatch])
+        #get the current states
+        current_states, new_current_states = self.get_current_states(minibatch = minibatch)
 
-        #reshape to match expected input dimensions
-        current_states = current_states.reshape(self.hp.MINIBATCH_SIZE, 
-                                                self.env.ENVIRONMENT_SHAPE[0], 1)
         current_qs_list = self.model.predict(current_states)
-
-
-        # Get future states from minibatch, then query NN model for Q values
-        # When using target network, query it, otherwise main network should be queried
-        new_current_states = np.array(
-            [transition[3] for transition in minibatch])
-        #reshape to match expected input dimensions
-        new_current_states = new_current_states.reshape(self.hp.MINIBATCH_SIZE, 
-                                                        self.env.ENVIRONMENT_SHAPE[0], 1)
         future_qs_list = self.target_model.predict(new_current_states)
 
+        
+        # Now we need to enumerate our batches
+        X,y = self.enumerate_batch(minibatch = minibatch, future_qs_list = future_qs_list, 
+                                   current_qs_list= current_qs_list)
+                                   
+        self.model.fit(X, y, batch_size=self.hp.MINIBATCH_SIZE, 
+                       verbose=0, shuffle=False, callbacks=None)
+
+        # If counter reaches set value, update target network with weights of main network
+        if self.env.action_number > self.hp.UPDATE_TARGET_EVERY:
+            self.target_model.set_weights(self.model.get_weights())
+            self.env.action_number = 0
+
+    #function to enumerate batch and generate X/y for training
+    def enumerate_batch(self, minibatch, future_qs_list, current_qs_list):
         X = []
         y = []
 
-        # Now we need to enumerate our batches
         for index, (current_state, action, reward, new_current_state) in enumerate(minibatch):
 
             # If not a terminal state, get new q from future states, otherwise set it to 0
@@ -192,14 +193,27 @@ class DrugSelector:
         # Fit on all samples as one batch, log only on terminal state
         #need to reshape x to match dimensions
         X = np.array(X).reshape(self.hp.MINIBATCH_SIZE, self.env.ENVIRONMENT_SHAPE[0], 1)
-        self.model.fit(X, np.array(y), batch_size=self.hp.MINIBATCH_SIZE, 
-                       verbose=0, shuffle=False, callbacks=None)
+        y = np.array(y)
 
-        # If counter reaches set value, update target network with weights of main network
-        if self.env.action_number > self.hp.UPDATE_TARGET_EVERY:
-            self.target_model.set_weights(self.model.get_weights())
-            self.env.action_number = 0
+        return X,y
+        
+    def get_current_states(self, minibatch):
+        # Get current states from minibatch, then query NN model for Q values
+        current_states = np.array([transition[0] for transition in minibatch])
 
+        #reshape to match expected input dimensions
+        current_states = current_states.reshape(self.hp.MINIBATCH_SIZE, 
+                                                self.env.ENVIRONMENT_SHAPE[0], 1)
+
+        # Get future states from minibatch, then query NN model for Q values
+        # When using target network, query it, otherwise main network should be queried
+        new_current_states = np.array(
+            [transition[3] for transition in minibatch])
+        #reshape to match expected input dimensions
+        new_current_states = new_current_states.reshape(self.hp.MINIBATCH_SIZE, 
+                                                        self.env.ENVIRONMENT_SHAPE[0], 1)
+
+        return current_states, new_current_states
     #function to get q vector for a given state
     def get_qs(self):
         if self.hp.TRAIN_INPUT == "state_vector":
@@ -256,13 +270,15 @@ def practice(agent, naive = False, standard_practice = False):
             agent.env.step()
 
             # Transform new continous state to new discrete state and count reward
-            reward = agent.env.sensor[2]
-            episode_reward += reward
+            # can't do this after just 1 step because there won't be anything in the sensor
+            if i != 1:
+                reward = agent.env.sensor[2]
+                episode_reward += reward
 
-            # Every step we update replay memory and train main network - only train if we are doing a not naive run
-            agent.update_replay_memory()
-            if not naive:
-                agent.train()
+                # Every step we update replay memory and train main network - only train if we are doing a not naive run
+                agent.update_replay_memory()
+                if not naive:
+                    agent.train()
             
             if agent.env.done: # break if either of the victory conditions are met
                 break #check out calc_reward in the evol_env class for how this is defined

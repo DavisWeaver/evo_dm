@@ -35,7 +35,7 @@ def test_init_state_envshape():
 def test_init_fitness_envshape():
     test_env = evol_env(train_input = "fitness", num_evols = 1)
     #test that the environment shape is equal to the length of the number of evols
-    assert test_env.ENVIRONMENT_SHAPE[0] == 1
+    assert test_env.ENVIRONMENT_SHAPE[0] == 5
 
 def test_init_popsize_envshape():
     test_env = evol_env(train_input = "pop_size")
@@ -86,7 +86,7 @@ def test_define_drugs(example_landscapes):
 def test_normalize_landscapes(example_landscapes):
     drugs = define_drugs(example_landscapes, num_drugs = 4)
     drugs = normalize_landscapes(drugs)
-    maxes = [np.max(drug) <= 1 for drug in env_init.drugs]
-    mins = [np.min(drug) >= 0 for drug in env_init.drugs] 
+    maxes = [np.max(drug) <= 1 for drug in drugs]
+    mins = [np.min(drug) >= 0 for drug in drugs] 
     assert all([mins, maxes])
     

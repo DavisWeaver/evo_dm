@@ -4,13 +4,15 @@
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
+from keras.utils import to_categorical
 from tensorflow.keras.optimizers import Adam
 from collections import deque
-from .evol_game import evol_env
+from evodm.evol_game import evol_env
 import random
 import numpy as np 
 from tqdm import tqdm
 from copy import deepcopy
+from itertools import chain
 
 # Function to set hyperparameters for the learner - just edit this any time you
 # want to screw around with them .
@@ -99,24 +101,22 @@ class DrugSelector:
                          input_shape=self.env.ENVIRONMENT_SHAPE))
             model.add(Conv1D(64, 3, activation="relu"))
             model.add(MaxPooling1D(pool_size=2))
+            model.add(Flatten())
         elif self.hp.TRAIN_INPUT == "fitness":
             #have to change the kernel size because of the weird difference in environment shape
-            model.add(Conv1D(64, 3, activation="relu",
-                         input_shape=self.env.ENVIRONMENT_SHAPE,
-                         padding= "same"))
-            model.add(Conv1D(64, 3, activation="relu", padding="same"))
-            model.add(MaxPooling1D(pool_size=2, padding = "same"))
+            model.add(Dense(28, activation="relu",
+                         input_shape=self.env.ENVIRONMENT_SHAPE))
         elif self.hp.TRAIN_INPUT == "pop_size":
             model.add(Conv1D(64, 3, activation="relu",
                          input_shape=self.env.ENVIRONMENT_SHAPE))
             model.add(Conv1D(64, 3, activation="relu"))
             model.add(MaxPooling1D(pool_size=2))
+            model.add(Flatten())
         else:
             print("please specify either state_vector, fitness, or pop_size for train_input when initializing the environment")
             return
         model.add(Dropout(0.2))
-        model.add(Flatten())
-        model.add(Dense(128))
+        model.add(Dense(28, activation = "relu"))
         model.add(Dense(len(self.env.ACTIONS), activation="linear"))
         model.compile(loss="mse", optimizer=Adam(learning_rate=self.hp.LEARNING_RATE), metrics=['accuracy'])
         return model
@@ -136,8 +136,9 @@ class DrugSelector:
                                        scale = (0.05 * self.hp.NOISE_MODIFIER))
 
         #muddy the sensor with the noise param
-        self.env.sensor[0] = self.env.sensor[0] * noise_param
-        self.env.sensor[3] = self.env.sensor[3] * noise_param
+        if self.hp.TRAIN_INPUT == "fitness":
+            self.env.sensor[0] = np.array([self.env.sensor[0][0], self.env.sensor[0][1] * noise_param])
+            self.env.sensor[3] = self.env.sensor[3]* noise_param
         return 
 
       # Trains main network every step during episode
@@ -203,7 +204,7 @@ class DrugSelector:
 
         #reshape to match expected input dimensions
         current_states = current_states.reshape(self.hp.MINIBATCH_SIZE, 
-                                                self.env.ENVIRONMENT_SHAPE[0], 1)
+                                                self.env.ENVIRONMENT_SHAPE[0])
 
         # Get future states from minibatch, then query NN model for Q values
         # When using target network, query it, otherwise main network should be queried
@@ -211,7 +212,7 @@ class DrugSelector:
             [transition[3] for transition in minibatch])
         #reshape to match expected input dimensions
         new_current_states = new_current_states.reshape(self.hp.MINIBATCH_SIZE, 
-                                                        self.env.ENVIRONMENT_SHAPE[0], 1)
+                                                        self.env.ENVIRONMENT_SHAPE[0])
 
         return current_states, new_current_states
     #function to get q vector for a given state
@@ -219,7 +220,20 @@ class DrugSelector:
         if self.hp.TRAIN_INPUT == "state_vector":
             tens = self.env.state_vector.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
         elif self.hp.TRAIN_INPUT == "fitness":
-            tens = self.env.fitness.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
+            #convert all
+            fitness = list(chain.from_iterable(self.env.fitness))
+            
+            #one hot encode previous action
+            prev_action_cat = to_categorical(self.env.prev_action-1, 
+                                             num_classes = len(self.env.ACTIONS))
+            prev_action_cat = np.ndarray.tolist(prev_action_cat)
+
+            #append each fitness value to the previous_action one-hot encoded vector
+            for i in range(len(fitness)):
+                prev_action_cat.append(fitness[i])
+    
+            tens = np.array(prev_action_cat)
+            tens = tens.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
         elif self.hp.TRAIN_INPUT == "pop_size":
             tens = self.env.pop_size.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
         else: 
@@ -230,6 +244,7 @@ class DrugSelector:
 #'main' function that iterates through simulations to train the agent
 # practice takes one argument (for now) - an agent of class `DrugSelector`
 def practice(agent, naive = False, standard_practice = False):
+    
     #every given number of episodes we are going to track the stats
     #format is [average_reward, min_reward, max_reward]
     reward_list = []
@@ -307,6 +322,7 @@ def practice(agent, naive = False, standard_practice = False):
         # reset environment for next iteratio
         agent.env.reset()
     return reward_list, agent
+
 
 
 def evol_deepmind(num_evols = 1, N = 5, episodes = 50,

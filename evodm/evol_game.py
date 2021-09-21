@@ -1,5 +1,6 @@
-from evodm import Landscape
+from evodm.landscapes import Landscape
 import numpy as np
+from keras.utils import to_categorical
 import math
 # Functions to convert data describing bacterial evolution sim into a format
 # that can be used by the learner
@@ -39,7 +40,7 @@ class evol_env:
         #define actions  
         self.ACTIONS = [i for i in range(1, num_drugs + 1)] # action space - added the plus one because I decided to use 1 indexing for the actions for no good reason a while ago
         self.action = 1 #first action - value will be updated by the learner
-        self.prev_action = 1 #pretend this is the second time seeing it why not
+        self.prev_action = 1.0 #pretend this is the second time seeing it why not
 
         #data structure for containing information the agent queries from the environment.
         # the format is: [previous_fitness, current_action, reward, next_fitness]
@@ -98,7 +99,7 @@ class evol_env:
         if self.TRAIN_INPUT == "state_vector":
             self.ENVIRONMENT_SHAPE = (len(self.state_vector),1)
         elif self.TRAIN_INPUT == "fitness":
-            self.ENVIRONMENT_SHAPE = (1 + self.NUM_EVOLS, 1)
+            self.ENVIRONMENT_SHAPE = (num_drugs + self.NUM_EVOLS,)
         elif self.TRAIN_INPUT == "pop_size":
             self.ENVIRONMENT_SHAPE = (self.NUM_OBS, 1)
         else:
@@ -129,7 +130,11 @@ class evol_env:
             if self.TRAIN_INPUT == "state_vector":
                 self.sensor = [self.state_vector, self.action, self.calc_reward(fitness = fitness), state_vector]
             elif self.TRAIN_INPUT == "fitness":
-                self.sensor= [np.array([self.action, self.fitness]), self.action, self.calc_reward(fitness = fitness), fitness]
+                #convert fitness + action into trainable state vector for n and n+1
+                prev_action_cat, action_cat = self.convert_fitness(fitness = fitness)
+                self.sensor= [np.array(prev_action_cat), 
+                                self.action, self.calc_reward(fitness = fitness), 
+                                np.array(action_cat)] 
             elif self.TRAIN_INPUT == "pop_size":
                 self.sensor= [self.pop_size, self.action, self.calc_reward(fitness = fitness), pop_size]
             else:
@@ -148,11 +153,22 @@ class evol_env:
         #update the current state vector
         self.state_vector = state_vector
 
-        #update action-1
-        self.prev_action = self.action
+        #update action-1 - its assumed that self.action is updated prior to initiating env.step
+        self.prev_action = float(self.action) #type conversion
 
         #done
         return
+
+    def convert_fitness(self, fitness): 
+
+        prev_action_cat = to_categorical(self.prev_action-1, num_classes = len(self.ACTIONS)) #-1 because of the dumb python indexing system
+        prev_action_cat = np.ndarray.tolist(prev_action_cat) #convert to list
+        prev_action_cat.append(self.fitness)
+        action_cat = to_categorical(self.action-1, num_classes = len(self.ACTIONS))
+        action_cat = np.ndarray.tolist(action_cat)
+        action_cat.append(fitness)
+
+        return prev_action_cat, action_cat
 
     def update_vcount(self, fitness):
         if np.mean(fitness) < self.PLAYER_WCUTOFF: 

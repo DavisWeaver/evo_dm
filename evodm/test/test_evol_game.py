@@ -6,11 +6,11 @@ import numpy as np
 #start testing that the environment class is working as expected
 @pytest.fixture
 def env_init():
-    return evol_env(normalize_drugs=True, random_start = False)
+    return evol_env(normalize_drugs=True, random_start = False, num_evols =3, add_noise = False)
 
 @pytest.fixture
 def popsize_env():
-    test_env = evol_env(train_input = "pop_size")
+    test_env = evol_env(train_input = "pop_size", add_noise = False)
     for i in range(2):
         test_env.step()
     return test_env 
@@ -64,7 +64,10 @@ def test_run_sim(env_init):
                                            sigma = env_init.sigma,
                                            state_vector = env_init.state_vector,
                                            drugs = env_init.drugs, action = env_init.action)
-    checkfitness = 0 <= fitness <= 1
+    if len(fitness) == 1:
+        checkfitness = 0 <= fitness <= 1
+    else:
+        checkfitness = all([0 <= i <= 1 for i in fitness])
     checkstate = all([0 <= i <= 1 for i in state_vector])
     assert all([checkfitness, checkstate])
 

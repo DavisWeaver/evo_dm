@@ -48,19 +48,24 @@ def test_current_states_shape(current_states, ds):
 
 #make sure all the actions fall in the defined action space
 def test_current_states_actions(current_states, ds):
-    action_bools = [i[0] in ds.env.ACTIONS for i in current_states]
+
+    actions_one_hot = [i[:len(ds.env.ACTIONS)] for i in current_states]
+    #convert the one hot action back into categorical and verify that they are all in ds.env.actions
+    action_bools = [np.dot(i, ds.env.ACTIONS) in ds.env.ACTIONS for i in actions_one_hot]
     assert all(action_bools)
 
-def test_current_states_fitness(current_states):
-    fitness_bools = [i[1] >= 0 and i[1] <= 1 for i in current_states]
+def test_current_states_fitness(current_states, ds):
+    fitness_bools = [i[len(ds.env.ACTIONS):] >= 0 and i[len(ds.env.ACTIONS):] <= 1 for i in current_states]
     assert all(fitness_bools)
 
 def test_new_current_states_actions(new_current_states, ds):
-    action_bools = [i[0] in ds.env.ACTIONS for i in new_current_states]
+    actions_one_hot = [i[:len(ds.env.ACTIONS)] for i in new_current_states]
+    #convert the one hot action back into categorical and verify that they are all in ds.env.actions
+    action_bools = [np.dot(i, ds.env.ACTIONS) in ds.env.ACTIONS for i in actions_one_hot]
     assert all(action_bools)
 
-def test_new_current_states_fitness(new_current_states):
-    fitness_bools = [i[1] >= 0 and i[1] <= 1 for i in new_current_states]
+def test_new_current_states_fitness(new_current_states, ds):
+    fitness_bools = [i[len(ds.env.ACTIONS):] >= 0 and i[len(ds.env.ACTIONS):] <= 1 for i in new_current_states]
     assert all(fitness_bools)
 
 #test the enumerate batch function
@@ -71,20 +76,5 @@ def batch_enumerated(ds_replay, current_states, new_current_states, minibatch):
     x,y = ds_replay.enumerate_batch(minibatch = minibatch, future_qs_list = future_qs_list, 
                                     current_qs_list = current_qs_list)
 
-
-def test_add_noise(ds):
-    #step forward so there is actually something in the sensor
-    ds.env.step()
-    
-    #check to see if the add_noise functionality is actually scrambling things up.
-    bool_list = []
-    for i in range(3):
-        ds.env.step()
-        fitness = ds.env.sensor[0][1]
-        ds.add_noise()
-        new_fitness = ds.env.sensor[0][1]
-        bool_list.append(new_fitness != fitness)
-    
-    assert any(bool_list)
 
 

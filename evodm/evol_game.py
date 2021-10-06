@@ -25,7 +25,9 @@ class evol_env:
                         player_wcutoff = 0.8, 
                         pop_wcutoff = 0.95, 
                         win_reward = 10, 
-                        drugs = "none"):
+                        drugs = "none", 
+                        noise_modifier = 1, 
+                        add_noise = True):
         #define switch for whether to record the state vector or fitness for the learner
         self.TRAIN_INPUT = train_input
         #define environmental variables
@@ -41,6 +43,11 @@ class evol_env:
         self.ACTIONS = [i for i in range(1, num_drugs + 1)] # action space - added the plus one because I decided to use 1 indexing for the actions for no good reason a while ago
         self.action = 1 #first action - value will be updated by the learner
         self.prev_action = 1.0 #pretend this is the second time seeing it why not
+
+        #should noise be introduced into the fitness readings?
+        self.NOISE_MODIFIER = noise_modifier
+        self.NOISE_BOOL = add_noise
+
 
         #data structure for containing information the agent queries from the environment.
         # the format is: [previous_fitness, current_action, reward, next_fitness]
@@ -94,6 +101,8 @@ class evol_env:
 
         ##Define initial fitness
         self.fitness = [np.dot(self.drugs[self.action-1], self.state_vector)]
+        if self.NOISE_BOOL:
+            self.fitness = self.add_noise(self.fitness)
         
         #Define the environment shape
         if self.TRAIN_INPUT == "state_vector":
@@ -121,6 +130,8 @@ class evol_env:
                                            sigma = self.sigma,
                                            state_vector = self.state_vector,
                                            drugs = self.drugs, action = self.action)
+        if self.NOISE_BOOL:
+            fitness = self.add_noise(fitness)
 
         ##Here we interpolate between the previous fitness and the next fitness
         pop_size = self.growth_curve(new_fitness = fitness)
@@ -195,7 +206,15 @@ class evol_env:
             reward = np.mean(1 - fitness)
         return reward
     
-    
+    def add_noise(self, fitness):
+        noise_param = np.random.normal(loc = 1.0, 
+                                       scale = (0.05 * self.NOISE_MODIFIER))
+
+        #muddy the fitness value with noise
+        if type(fitness) is not list: 
+            return fitness * noise_param
+        else:
+            return [i * noise_param for i in fitness]
 
     def growth_curve(self, new_fitness):
         new_fitness = np.mean(new_fitness)
@@ -246,6 +265,9 @@ class evol_env:
         self.done = False
         #re-calculate fitness with the new state_vector
         self.fitness = [np.dot(self.drugs[self.action-1], self.state_vector)]
+        if self.NOISE_BOOL: 
+            self.fitness = self.add_noise(self.fitness)
+
         
 
 #helper function for generating the od_dist

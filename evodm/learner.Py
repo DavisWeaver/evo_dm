@@ -78,7 +78,9 @@ class DrugSelector:
                             player_wcutoff = self.hp.PLAYER_WCUTOFF, 
                             pop_wcutoff= self.hp.POP_WCUTOFF,
                             win_reward=self.hp.WIN_REWARD, 
-                            drugs = drugs)
+                            drugs = drugs, 
+                            add_noise = self.hp.NOISE, 
+                            noise_modifier= self.hp.NOISE_MODIFIER)
 
         # main model  # gets trained every step
         self.model = self.create_model()
@@ -125,21 +127,7 @@ class DrugSelector:
 
         #update master memory - for diagnostic purposes only
         self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor])
-
-        if self.hp.NOISE and self.hp.TRAIN_INPUT in ["fitness", "pop_size"]:
-            self.add_noise() #adds some stochastic variation to the recorded fitness values
-        #update replay memory - this is what the deep learning model has access to
         self.replay_memory.append(self.env.sensor)
-    
-    def add_noise(self):
-        noise_param = np.random.normal(loc = 1.0, 
-                                       scale = (0.05 * self.hp.NOISE_MODIFIER))
-
-        #muddy the sensor with the noise param
-        if self.hp.TRAIN_INPUT == "fitness":
-            self.env.sensor[0] = np.array([self.env.sensor[0][0], self.env.sensor[0][1] * noise_param])
-            self.env.sensor[3] = self.env.sensor[3]* noise_param
-        return 
 
       # Trains main network every step during episode
       #gonna chunk this out so I can actually test it

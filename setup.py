@@ -8,6 +8,7 @@ setup(
     packages=['evodm', "evodm.test"], 
     install_requires = [
       "tensorflow", 
+      "keras",
       "numpy",
       "tqdm",
       "scipy", 

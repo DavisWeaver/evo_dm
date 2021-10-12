@@ -1,6 +1,6 @@
 from evodm.landscapes import Landscape
 import numpy as np
-from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 import math
 # Functions to convert data describing bacterial evolution sim into a format
 # that can be used by the learner

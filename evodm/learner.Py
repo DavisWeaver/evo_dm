@@ -4,7 +4,6 @@
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
-from keras.utils import to_categorical
 from tensorflow.keras.optimizers import Adam
 from collections import deque
 from evodm.evol_game import evol_env
@@ -12,7 +11,6 @@ import random
 import numpy as np 
 from tqdm import tqdm
 from copy import deepcopy
-from itertools import chain
 
 # Function to set hyperparameters for the learner - just edit this any time you
 # want to screw around with them .
@@ -181,7 +179,7 @@ class DrugSelector:
 
         # Fit on all samples as one batch, log only on terminal state
         #need to reshape x to match dimensions
-        X = np.array(X).reshape(self.hp.MINIBATCH_SIZE, self.env.ENVIRONMENT_SHAPE[0], 1)
+        X = np.array(X).reshape(self.hp.MINIBATCH_SIZE, self.env.ENVIRONMENT_SHAPE[0])
         y = np.array(y)
 
         return X,y
@@ -209,19 +207,8 @@ class DrugSelector:
             tens = self.env.state_vector.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
         elif self.hp.TRAIN_INPUT == "fitness":
             #convert all
-            fitness = list(chain.from_iterable(self.env.fitness))
-            
-            #one hot encode previous action
-            prev_action_cat = to_categorical(self.env.prev_action-1, 
-                                             num_classes = len(self.env.ACTIONS))
-            prev_action_cat = np.ndarray.tolist(prev_action_cat)
-
-            #append each fitness value to the previous_action one-hot encoded vector
-            for i in range(len(fitness)):
-                prev_action_cat.append(fitness[i])
-    
-            tens = np.array(prev_action_cat)
-            tens = tens.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
+            sensor = self.env.sensor[3]
+            tens = sensor.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
         elif self.hp.TRAIN_INPUT == "pop_size":
             tens = self.env.pop_size.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
         else: 

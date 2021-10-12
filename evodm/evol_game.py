@@ -133,8 +133,7 @@ class evol_env:
         if self.NOISE_BOOL:
             fitness = self.add_noise(fitness)
 
-        ##Here we interpolate between the previous fitness and the next fitness
-        pop_size = self.growth_curve(new_fitness = fitness)
+        
         # Again, this is creating a stacked data structure where each time point provides
         # [current_fitness, current_action, reward, next_fitness]
         if self.action_number != 1:
@@ -147,14 +146,14 @@ class evol_env:
                                 self.action, self.calc_reward(fitness = fitness), 
                                 np.array(action_cat)] 
             elif self.TRAIN_INPUT == "pop_size":
+                ##Here we interpolate between the previous fitness and the next fitness
+                pop_size = self.growth_curve(new_fitness = fitness)
                 self.sensor= [self.pop_size, self.action, self.calc_reward(fitness = fitness), pop_size]
+                 #update pop size vector
+                self.pop_size = pop_size    
             else:
                 print("please specify either state_vector, fitness, or pop_size for train_input when initializing the environment")
                 return
-        
-        
-        #update pop size vector
-        self.pop_size = pop_size
         
         #update vcount
         self.update_vcount(fitness = fitness)

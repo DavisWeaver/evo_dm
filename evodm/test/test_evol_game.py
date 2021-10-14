@@ -11,7 +11,7 @@ def env_init():
 @pytest.fixture
 def popsize_env():
     test_env = evol_env(train_input = "pop_size", add_noise = False)
-    for i in range(2):
+    for i in range(3):
         test_env.step()
     return test_env 
 

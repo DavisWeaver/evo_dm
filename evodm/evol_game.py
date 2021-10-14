@@ -105,7 +105,7 @@ class evol_env:
             self.fitness = self.add_noise(self.fitness)
         
         #Define the environment shape
-        if self.TRAIN_INPUT == "state_vector":
+        if self.TRAIN_INPUT == "state_vector":#give the state vector for every evolution
             self.ENVIRONMENT_SHAPE = (len(self.state_vector),1)
         elif self.TRAIN_INPUT == "fitness":
             self.ENVIRONMENT_SHAPE = (num_drugs + self.NUM_EVOLS,)

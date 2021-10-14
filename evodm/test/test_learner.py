@@ -2,6 +2,7 @@ from evodm import DrugSelector, practice, hyperparameters
 import random
 import numpy as np
 import pytest
+from itertools import chain
 
 #define fixtures to use for testing functions - lots of these will depend on each other
 @pytest.fixture
@@ -16,9 +17,32 @@ def hp():
     return hp
 
 @pytest.fixture
+def hp_state():
+    hp_state = hyperparameters()
+    hp_state.TRAIN_INPUT = "state_vector"
+    hp_state.MIN_REPLAY_MEMORY_SIZE = 20
+    hp_state.MINIBATCH_SIZE = 10
+    hp_state.RESET_EVERY = 20
+    hp_state.EPISODES = 10
+    hp_state.N = 4
+    return hp_state
+
+@pytest.fixture
 def ds(hp):
     ds = DrugSelector(hp = hp)
     return ds
+
+@pytest.fixture
+def ds_state(hp_state):
+    ds_state = DrugSelector(hp=hp_state)
+    for episode in range(1, ds_state.hp.EPISODES + 1):
+        for i in range(1, ds_state.hp.RESET_EVERY):
+            ds_state.env.action = random.randint(np.min(ds_state.env.ACTIONS),np.max(ds_state.env.ACTIONS))
+            ds_state.env.step()
+            ds_state.update_replay_memory()
+        ds_state.env.reset()
+    return ds_state
+
 
 @pytest.fixture
 def ds_replay(hp):
@@ -31,11 +55,12 @@ def ds_replay(hp):
         ds_replay.env.reset()
     return ds_replay
 
+
 @pytest.fixture
 def minibatch(ds_replay):
     minibatch = random.sample(ds_replay.replay_memory, ds_replay.hp.MINIBATCH_SIZE)
     return minibatch
-
+ 
 #test get current states --> process by which we grab the current state and next state from the replay memory s
 @pytest.fixture
 def current_states(ds_replay, minibatch):
@@ -56,6 +81,12 @@ def batch_enumerated(ds_replay, current_states, new_current_states, minibatch):
                                     current_qs_list = current_qs_list)
     return [x,y]
 
+#don't need to test the intermediate steps because they are the same regardless of train input
+@pytest.fixture
+def current_states_state(ds_state):
+    minibatch = random.sample(ds_state.replay_memory, ds_state.hp.MINIBATCH_SIZE)
+    current_states, new_current_states = ds_state.get_current_states(minibatch = minibatch)
+    return [current_states, new_current_states]
 
 #need input of shape 2,
 def test_current_states_shape(current_states, ds):
@@ -83,9 +114,38 @@ def test_new_current_states_fitness(new_current_states, ds):
     fitness_bools = [i[len(ds.env.ACTIONS):] >= 0 and i[len(ds.env.ACTIONS):] <= 1 for i in new_current_states]
     assert all(fitness_bools)
 
+#This section of the code used to break when you use state_vector as the train_input
+def test_predict_qs_state(current_states_state, ds_state):
+    current_states = current_states_state[0]
+    current_qs_list = ds_state.model.predict(current_states)
+    assert len(current_states) == len(current_qs_list)
+
+#This section of the code used to break when you use state_vector as the train_input
+def test_predict_qs_state2(current_states_state, ds_state):
+    current_states = current_states_state[0]
+    current_qs_list = ds_state.model.predict(current_states)
+    assert len(current_qs_list[0]) == len(ds_state.env.ACTIONS)
+
+#now verify that all q values are valid floats
+def test_predict_qs_state3(current_states_state, ds_state):
+    #setup
+    current_states = current_states_state[0]
+    current_qs_list = ds_state.model.predict(current_states)
+    
+    #this line flattens the list
+    qs = list(chain.from_iterable(current_qs_list))
+    bools = [isinstance(i, np.floating) for i in qs] #np type floats don't work with regular python type checking - super strange
+
+    assert all(bools)
+
 def test_get_qs(ds_replay):
     qs = ds_replay.get_qs()
     assert len(qs) == len(ds_replay.env.ACTIONS)
+
+#test it for ds_state as well
+def test_get_qs_state(ds_state):
+    qs = ds_state.get_qs()
+    assert len(qs) == len(ds_state.env.ACTIONS)
 
 def test_get_qs2(ds_replay,ds):
     for i in range(3):
@@ -95,6 +155,18 @@ def test_get_qs2(ds_replay,ds):
     #just make sure q changes based on the inputs
     qs1 = ds.get_qs()
     qs2 = ds_replay.get_qs()
+
+    bools = [qs1[i] != qs2[i] for i in range(len(qs1))]
+    assert any(bools)
+
+def test_get_qs2_state(ds_state):
+    #just make sure q changes based on the inputs
+    qs1 = ds_state.get_qs()
+    for i in range(6):
+        ds_state.env.action = random.randint(np.min(ds_state.env.ACTIONS),np.max(ds_state.env.ACTIONS))
+        ds_state.env.step()
+        ds_state.update_replay_memory()
+    qs2 = ds_state.get_qs()
 
     bools = [qs1[i] != qs2[i] for i in range(len(qs1))]
     assert any(bools)

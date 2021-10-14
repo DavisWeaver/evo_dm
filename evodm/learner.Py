@@ -20,8 +20,8 @@ class hyperparameters:
 
     def __init__(self):
         # Model training settings
-        self.REPLAY_MEMORY_SIZE = 5000
-        self.MIN_REPLAY_MEMORY_SIZE = 500
+        self.REPLAY_MEMORY_SIZE = 10000
+        self.MIN_REPLAY_MEMORY_SIZE = 1000
         self.MINIBATCH_SIZE = 100  # still working out what this means
         self.UPDATE_TARGET_EVERY = 500 #every 500 steps, update the target
         self.TRAIN_INPUT = "state_vector"
@@ -123,9 +123,10 @@ class DrugSelector:
 
     def update_replay_memory(self):
 
-        #update master memory - for diagnostic purposes only
-        self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor])
-        self.replay_memory.append(self.env.sensor)
+        if self.env.action_number !=1:
+            self.replay_memory.append(self.env.sensor)
+            #update master memory - for diagnostic purposes only
+            self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor])
 
       # Trains main network every step during episode
       #gonna chunk this out so I can actually test it
@@ -179,7 +180,11 @@ class DrugSelector:
 
         # Fit on all samples as one batch, log only on terminal state
         #need to reshape x to match dimensions
-        X = np.array(X).reshape(self.hp.MINIBATCH_SIZE, self.env.ENVIRONMENT_SHAPE[0])
+        if self.env.TRAIN_INPUT == "state_vector":
+            X = np.array(X).reshape(self.hp.MINIBATCH_SIZE, self.env.ENVIRONMENT_SHAPE[0], 
+                                    self.env.ENVIRONMENT_SHAPE[1])
+        else: 
+            X = np.array(X).reshape(self.hp.MINIBATCH_SIZE, self.env.ENVIRONMENT_SHAPE[0])
         y = np.array(y)
 
         return X,y
@@ -187,20 +192,28 @@ class DrugSelector:
     def get_current_states(self, minibatch):
         # Get current states from minibatch, then query NN model for Q values
         current_states = np.array([transition[0] for transition in minibatch])
-
-        #reshape to match expected input dimensions
-        current_states = current_states.reshape(self.hp.MINIBATCH_SIZE, 
-                                                self.env.ENVIRONMENT_SHAPE[0])
-
         # Get future states from minibatch, then query NN model for Q values
         # When using target network, query it, otherwise main network should be queried
         new_current_states = np.array(
             [transition[3] for transition in minibatch])
+
         #reshape to match expected input dimensions
-        new_current_states = new_current_states.reshape(self.hp.MINIBATCH_SIZE, 
-                                                        self.env.ENVIRONMENT_SHAPE[0])
+        if self.env.TRAIN_INPUT == "state_vector":
+            current_states = current_states.reshape(self.hp.MINIBATCH_SIZE, 
+                                                    self.env.ENVIRONMENT_SHAPE[0],
+                                                    self.env.ENVIRONMENT_SHAPE[1])
+
+            new_current_states = new_current_states.reshape(self.hp.MINIBATCH_SIZE, 
+                                                            self.env.ENVIRONMENT_SHAPE[0],
+                                                            self.env.ENVIRONMENT_SHAPE[1])               
+        else:
+            current_states.reshape(self.hp.MINIBATCH_SIZE, 
+                                   self.env.ENVIRONMENT_SHAPE[0])                                                  
+            new_current_states = new_current_states.reshape(self.hp.MINIBATCH_SIZE, 
+                                                            self.env.ENVIRONMENT_SHAPE[0])
 
         return current_states, new_current_states
+
     #function to get q vector for a given state
     def get_qs(self):
         if self.hp.TRAIN_INPUT == "state_vector":

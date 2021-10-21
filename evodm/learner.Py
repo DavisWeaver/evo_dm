@@ -314,7 +314,7 @@ def practice(agent, naive = False, standard_practice = False):
 
 
 def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
-                  reset_every = 200, min_epsilon = 0.005,
+                  reset_every = 200, min_epsilon = 0.005, 
                   train_input = "fitness",  random_start = False, 
                   noise = False, noise_modifier = 1, num_drugs = 4, 
                   sigma = 0.5, normalize_drugs = True, 

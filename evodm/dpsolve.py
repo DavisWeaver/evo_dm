@@ -12,7 +12,10 @@ class dp_env:
         sigma: epistasis coefficient
         
     Returns:
-        A tuple (policy, V) of the optimal policy and the optimal value function.
+        a class containing the following required data: 
+        dp_env.P: transition tuples where dp_env.P[s][a] corresponds to all transitions for a given state-action pair.
+        dp_env.nA: number of actions
+        dp_env.nS: number of states
     """
     def __init__(self, N, sigma, 
                  correl = np.linspace(-1.0,1.0,51), 
@@ -181,7 +184,8 @@ def policy_improvement(env, policy_eval_fn=policy_eval, discount_factor=0.99):
     until an optimal policy is found.
     
     Args:
-        env: The OpenAI environment.
+        env: dp_env defined above - defines the markov decision process 
+            for the problem of drug cycling to treat a population evolving on fitness landscapes
         policy_eval_fn: Policy Evaluation function that takes 3 arguments:
             policy, env, discount_factor.
         discount_factor: gamma discount factor.

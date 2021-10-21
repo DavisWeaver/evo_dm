@@ -1,12 +1,23 @@
+from numpy.lib.function_base import average
 from evodm import evol_env, generate_landscapes, define_drugs, normalize_landscapes, run_sim
+from evodm.evol_game import discretize_state
 import pytest
 import numpy.testing as npt
 import numpy as np
+import random
 
 #start testing that the environment class is working as expected
 @pytest.fixture
 def env_init():
     return evol_env(normalize_drugs=True, random_start = False, num_evols =3, add_noise = False)
+
+@pytest.fixture
+def env_mature():
+    env = evol_env(normalize_drugs=True, random_start = False, num_evols =3, add_noise = False)
+    for i in range(100):
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+    return env
 
 @pytest.fixture
 def popsize_env():
@@ -71,6 +82,33 @@ def test_run_sim(env_init):
     checkstate = all([0 <= i <= 1 for i in state_vector])
     assert all([checkfitness, checkstate])
 
+#check that we can adequately turn a population with many possible futures into a single population
+def test_discretize_state1():
+    state_vector = np.array([0,0.2,0.2,0, 0, 0, 0, 0.6])
+    states = state_vector.reshape((len(state_vector), 1))
+    new_states = discretize_state(states)
+    assert np.max(new_states) == 1
+
+#do it again - this time be sure it doesn't break if you give it something that already has the population all in one state
+def test_discretize_state2():
+    state_vector = np.array([0,0,1,0, 0, 0, 0, 0])
+    states = state_vector.reshape((len(state_vector), 1))
+    new_states = discretize_state(states)
+    assert all([state_vector[i] == new_states[i] for i in range(len(state_vector))])
+
+#make sure it can go without averaging the evolutionary outcomes.
+def test_run_sim2(env_mature):
+    fitness, state_vector = run_sim(evol_steps = env_mature.NUM_EVOLS, N = env_mature.N,
+                                           sigma = env_mature.sigma,
+                                           state_vector = env_mature.state_vector,
+                                           drugs = env_mature.drugs, action = env_mature.action, 
+                                           average_outcomes=False)
+    if len(fitness) == 1:
+        checkfitness = 0 <= fitness <= 1
+    else:
+        checkfitness = all([0 <= i <= 1 for i in fitness])
+    checkstate = all([i == 1 or i == 0 for i in state_vector])
+    assert all([checkfitness, checkstate])
 #just make sure Jeff's code doesn't break while we're doing other things
 @pytest.fixture
 def example_landscapes():
@@ -92,4 +130,8 @@ def test_normalize_landscapes(example_landscapes):
     maxes = [np.max(drug) <= 1 for drug in drugs]
     mins = [np.min(drug) >= 0 for drug in drugs] 
     assert all([mins, maxes])
+
+
+
+
     

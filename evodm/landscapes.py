@@ -10,6 +10,8 @@ from numpy.linalg import matrix_power
 class Landscape:
     """
     This class represents Landscapes which are used as the central objects for Markov evolutions and other calculations.
+    Jeff Maltas wrote this module - described in more detail in a published article: 
+    Maltas, J., McNally, D.M. and Wood, K.B. (2021), Evolution in alternating environments with tunable interlandscape correlations. Evolution, 75: 10-24. https://doi.org/10.1111/evo.14121
     
     ...
 

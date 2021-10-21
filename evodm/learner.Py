@@ -7,6 +7,7 @@ from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
 from tensorflow.keras.optimizers import Adam
 from collections import deque
 from evodm.evol_game import evol_env
+from evodm.dpsolve import dp_env, policy_improvement
 import random
 import numpy as np 
 from tqdm import tqdm
@@ -37,6 +38,7 @@ class hyperparameters:
         self.NUM_EVOLS = 1 # how many evolutionary steps per time step
         self.SIGMA = 0.5
         self.NORMALIZE_DRUGS = True # should fitness values for all landscapes be bound between 0 and 1?
+        self.AVERAGE_OUTCOMES = False
         # new evolutionary "game" every n steps or n *num_evols total evolutionary movements
         self.RESET_EVERY = 200
         self.EPISODES = 50
@@ -78,7 +80,8 @@ class DrugSelector:
                             win_reward=self.hp.WIN_REWARD, 
                             drugs = drugs, 
                             add_noise = self.hp.NOISE, 
-                            noise_modifier= self.hp.NOISE_MODIFIER)
+                            noise_modifier= self.hp.NOISE_MODIFIER,
+                            average_outcomes=self.hp.AVERAGE_OUTCOMES)
 
         # main model  # gets trained every step
         self.model = self.create_model()
@@ -229,10 +232,48 @@ class DrugSelector:
 
         return self.model.predict(tens)[0]
 
+def compute_optimal_policy(agent):
+    '''
+    Function to compute optimal policy based on reinforcement learning problem defined by the class DrugSelector
+    ...
+    Args
+    ------
+    agent: class DrugSelector 
+
+    Returns numeric matrix 
+        encoding optimal actions a for all states s in S
+    '''
+
+    env = dp_env(N = agent.env.N, sigma = agent.env.sigma, 
+                 drugs = agent.env.drugs, num_drugs= len(agent.env.drugs))
+    
+    policy, V = policy_improvement(env = env)
+
+    return policy
+
+
+def compute_optimal_action(agent, policy):
+    '''
+    Function to compute the optimal action based on a deterministic policy. 
+    ...
+    Args
+    ------
+    agent: class DrugSelector
+    policy: numeric matrix 
+        encoding optimal actions a for all states s in S
+
+    Returns int 
+        corresponding to optimal action
+    '''
+    agent.env.state_vector * policy
+    
+
 #'main' function that iterates through simulations to train the agent
 # practice takes one argument (for now) - an agent of class `DrugSelector`
-def practice(agent, naive = False, standard_practice = False):
-    
+def practice(agent, naive = False, standard_practice = False, dp_solution = False):
+    if dp_solution:
+        dp_policy = compute_optimal_policy(agent)
+
     #every given number of episodes we are going to track the stats
     #format is [average_reward, min_reward, max_reward]
     reward_list = []
@@ -256,6 +297,8 @@ def practice(agent, naive = False, standard_practice = False):
                             agent.env.action = random.sample(avail_actions, k = 1)[0] #need to take the first element of the list because thats how random.sample outputs it
                     else: 
                         agent.env.action = random.randint(np.min(agent.env.ACTIONS),np.max(agent.env.ACTIONS))
+                elif dp_solution:
+                    agent.env.action = compute_optimal_action(agent)
                 else:
                     agent.env.action = np.argmax(agent.get_qs()) + 1 #plus one because of the stupid fucking indexing system
             else:
@@ -319,7 +362,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   noise = False, noise_modifier = 1, num_drugs = 4, 
                   sigma = 0.5, normalize_drugs = True, 
                   player_wcutoff = 0.7, pop_wcutoff = 0.9, win_threshold = 10,
-                  win_reward = 10, standard_practice = False, drugs = "none"):
+                  win_reward = 10, standard_practice = False, drugs = "none",
+                  average_outcomes = False):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
     to try and minimize the fitness of a population evolving on a landscape.
@@ -369,6 +413,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
         should the comparison group mimic the current standard practice? i.e. 
         should the comparison group give a random drug until fitness approaches 
         some maximum and then randomly switch to another available drug?
+    average_outcomes: bool
     """
     #initialize hyperparameters - and edit them according to the user inputs
     hp = hyperparameters()
@@ -388,6 +433,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     hp.POP_WCUTOFF = pop_wcutoff
     hp.WIN_THRESHOLD = int(win_threshold)
     hp.WIN_REWARD = win_reward
+    hp.AVERAGE_OUTCOMES = average_outcomes
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes

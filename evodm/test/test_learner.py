@@ -162,14 +162,20 @@ def test_get_qs2(ds_replay,ds):
 def test_get_qs2_state(ds_state):
     #just make sure q changes based on the inputs
     qs1 = ds_state.get_qs()
-    for i in range(6):
+    for i in range(20):
         ds_state.env.action = random.randint(np.min(ds_state.env.ACTIONS),np.max(ds_state.env.ACTIONS))
         ds_state.env.step()
         ds_state.update_replay_memory()
     qs2 = ds_state.get_qs()
+    for i in range(20):
+        ds_state.env.action = random.randint(np.min(ds_state.env.ACTIONS),np.max(ds_state.env.ACTIONS))
+        ds_state.env.step()
+        ds_state.update_replay_memory()
+    qs3 = ds_state.get_qs()
 
     bools = [qs1[i] != qs2[i] for i in range(len(qs1))]
-    assert any(bools)
+    bools2 = [qs1[i] != qs3[i] for i in range(len(qs1))]
+    assert any([bools, bools2])
     
 def test_enumerate_batch_x(batch_enumerated):
     x = batch_enumerated[0]
@@ -189,6 +195,8 @@ def test_update_weights(ds_replay, batch_enumerated):
     bools = [weights_1[i] != weights_2[i] for i in range(len(weights_1))]
     #test that the weights are being updated
     assert any(bools)
+
+#def test_compute_optimal_action(ds_replay):
     
 
 

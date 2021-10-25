@@ -38,7 +38,7 @@ class hyperparameters:
         self.NUM_EVOLS = 1 # how many evolutionary steps per time step
         self.SIGMA = 0.5
         self.NORMALIZE_DRUGS = True # should fitness values for all landscapes be bound between 0 and 1?
-        self.AVERAGE_OUTCOMES = False
+        self.AVERAGE_OUTCOMES = False #should we use the average of infinite evolutionary sims or use a single trajectory?
         # new evolutionary "game" every n steps or n *num_evols total evolutionary movements
         self.RESET_EVERY = 200
         self.EPISODES = 50
@@ -265,7 +265,13 @@ def compute_optimal_action(agent, policy):
     Returns int 
         corresponding to optimal action
     '''
-    agent.env.state_vector * policy
+    
+    index = [i for i,j in enumerate(agent.env.state_vector) if j == 1.]
+    action = np.argmax(policy[index]) + 1 #plus one because I made the bad decision to force the actions to be 1,2,3,4 once upon a time
+    
+    return action
+    
+
     
 
 #'main' function that iterates through simulations to train the agent
@@ -298,7 +304,7 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
                     else: 
                         agent.env.action = random.randint(np.min(agent.env.ACTIONS),np.max(agent.env.ACTIONS))
                 elif dp_solution:
-                    agent.env.action = compute_optimal_action(agent)
+                    agent.env.action = compute_optimal_action(agent, dp_policy)
                 else:
                     agent.env.action = np.argmax(agent.get_qs()) + 1 #plus one because of the stupid fucking indexing system
             else:
@@ -308,6 +314,8 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
                     if np.mean(agent.env.fitness) > 0.9:
                         avail_actions = [action for action in agent.env.ACTIONS if action != agent.env.action] #grab all actions except the one currently selected
                         agent.env.action = random.sample(avail_actions, k = 1)[0] #need to take the first element of the list because thats how random.sample outputs it
+                elif dp_solution:
+                    agent.env.action = compute_optimal_action(agent, dp_policy)
                 else: 
                     agent.env.action = random.randint(np.min(agent.env.ACTIONS),np.max(agent.env.ACTIONS))
 

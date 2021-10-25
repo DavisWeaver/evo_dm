@@ -1,9 +1,9 @@
-from evodm import DrugSelector, practice, hyperparameters
+from evodm import DrugSelector, practice, hyperparameters, policy_improvement, dp_env
+from evodm.learner import compute_optimal_policy, compute_optimal_action
 import random
 import numpy as np
 import pytest
 from itertools import chain
-
 #define fixtures to use for testing functions - lots of these will depend on each other
 @pytest.fixture
 def hp():
@@ -14,6 +14,7 @@ def hp():
     hp.RESET_EVERY = 20
     hp.EPISODES = 10
     hp.N = 4
+    hp.AVERAGE_OUTCOMES = True
     return hp
 
 @pytest.fixture
@@ -25,7 +26,20 @@ def hp_state():
     hp_state.RESET_EVERY = 20
     hp_state.EPISODES = 10
     hp_state.N = 4
+    hp_state.AVERAGE_OUTCOMES = True
     return hp_state
+
+@pytest.fixture
+def hp_one_traj():
+    hp_one_traj = hyperparameters()
+    hp_one_traj.TRAIN_INPUT = "state_vector"
+    hp_one_traj.MIN_REPLAY_MEMORY_SIZE = 20
+    hp_one_traj.MINIBATCH_SIZE = 10
+    hp_one_traj.RESET_EVERY = 20
+    hp_one_traj.EPISODES = 10
+    hp_one_traj.AVERAGE_OUTCOMES = False
+    hp_one_traj.N = 4
+    return hp_one_traj
 
 @pytest.fixture
 def ds(hp):
@@ -42,6 +56,17 @@ def ds_state(hp_state):
             ds_state.update_replay_memory()
         ds_state.env.reset()
     return ds_state
+
+@pytest.fixture
+def ds_one_traj(hp_one_traj):
+    ds_one_traj = DrugSelector(hp=hp_one_traj)
+    for episode in range(1, ds_one_traj.hp.EPISODES + 1):
+        for i in range(1, ds_one_traj.hp.RESET_EVERY):
+            ds_one_traj.env.action = random.randint(np.min(ds_one_traj.env.ACTIONS),np.max(ds_one_traj.env.ACTIONS))
+            ds_one_traj.env.step()
+            ds_one_traj.update_replay_memory()
+        ds_one_traj.env.reset()
+    return ds_one_traj
 
 
 @pytest.fixture
@@ -88,6 +113,12 @@ def current_states_state(ds_state):
     current_states, new_current_states = ds_state.get_current_states(minibatch = minibatch)
     return [current_states, new_current_states]
 
+@pytest.fixture
+def current_states_onetraj(ds_one_traj):
+    minibatch = random.sample(ds_one_traj.replay_memory, ds_one_traj.hp.MINIBATCH_SIZE)
+    current_states, new_current_states = ds_one_traj.get_current_states(minibatch = minibatch)
+    return [current_states, new_current_states]
+
 #need input of shape 2,
 def test_current_states_shape(current_states, ds):
     assert current_states[0].shape == ds.env.ENVIRONMENT_SHAPE
@@ -103,6 +134,12 @@ def test_current_states_actions(current_states, ds):
 def test_current_states_fitness(current_states, ds):
     fitness_bools = [i[len(ds.env.ACTIONS):] >= 0 and i[len(ds.env.ACTIONS):] <= 1 for i in current_states]
     assert all(fitness_bools)
+
+#make sure the entire population is in one state for current_states_onetraj
+def test_current_states_onetraj(current_states_onetraj):
+    current_states = current_states_onetraj[0]
+    bools = [np.max(i) == 1 for i in current_states]
+    assert all(bools)
 
 def test_new_current_states_actions(new_current_states, ds):
     actions_one_hot = [i[:len(ds.env.ACTIONS)] for i in new_current_states]
@@ -131,6 +168,16 @@ def test_predict_qs_state3(current_states_state, ds_state):
     #setup
     current_states = current_states_state[0]
     current_qs_list = ds_state.model.predict(current_states)
+    
+    #this line flattens the list
+    qs = list(chain.from_iterable(current_qs_list))
+    bools = [isinstance(i, np.floating) for i in qs] #np type floats don't work with regular python type checking - super strange
+
+    assert all(bools)
+
+def test_predict_qs_onetraj(current_states_onetraj, ds_one_traj):
+    current_states = current_states_onetraj[0]
+    current_qs_list = ds_one_traj.model.predict(current_states)
     
     #this line flattens the list
     qs = list(chain.from_iterable(current_qs_list))
@@ -196,7 +243,19 @@ def test_update_weights(ds_replay, batch_enumerated):
     #test that the weights are being updated
     assert any(bools)
 
-#def test_compute_optimal_action(ds_replay):
+
+@pytest.fixture
+def opt_policy(ds_one_traj):
+    opt_policy = compute_optimal_policy(ds_one_traj)
+    return opt_policy
+
+def test_compute_optimal_policy(opt_policy):
+    bools = [np.sum(i) == 1 for i in opt_policy]
+    assert all(bools)
+
+def test_compute_optimal_action(ds_one_traj, opt_policy):
+    action = compute_optimal_action(agent = ds_one_traj, policy = opt_policy)
+    assert action in [1,2,3,4]
     
 
 

@@ -331,7 +331,7 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
 
                 # Every step we update replay memory and train main network - only train if we are doing a not naive run
                 agent.update_replay_memory()
-                if not naive:
+                if not any([dp_solution, naive]):
                     agent.train()
             
             if agent.env.done: # break if either of the victory conditions are met

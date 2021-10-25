@@ -451,13 +451,16 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     #initialize agent, including the updated hyperparameters
     agent = DrugSelector(hp = hp, drugs = drugs)
     naive_agent = deepcopy(agent) #otherwise it all gets overwritten by the actual agent
+    if not average_outcomes:
+        dp_agent = deepcopy(agent)
+        dp_rewards, dp_agent = practice(dp_agent, dp_solution = True)
 
     #run the agent in the naive case and then in the reg case
     naive_rewards, naive_agent = practice(naive_agent, naive = True, standard_practice=standard_practice)
     rewards, agent = practice(agent, naive = False)
 
 
-    return [rewards, naive_rewards, agent, naive_agent]
+    return [rewards, naive_rewards, agent, naive_agent, dp_agent, dp_rewards]
 
 #rewards = evol_deepmind()
 #naive_rewards= evol_deepmind(naive = True)

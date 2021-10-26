@@ -5,9 +5,11 @@
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import to_categorical
 from collections import deque
 from evodm.evol_game import evol_env
 from evodm.dpsolve import dp_env, policy_improvement
+import pandas as pd
 import random
 import numpy as np 
 from tqdm import tqdm
@@ -129,8 +131,11 @@ class DrugSelector:
         if self.env.action_number !=1:
             self.replay_memory.append(self.env.sensor)
             #update master memory - for diagnostic purposes only
-            self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor])
-
+            if self.env.TRAIN_INPUT == "fitness":
+                #want to save the state vector history somewhere, regardless of what we use for training. 
+                self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor, self.env.state_vector])
+            else:
+                self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor])
       # Trains main network every step during episode
       #gonna chunk this out so I can actually test it
     def train(self):
@@ -271,9 +276,51 @@ def compute_optimal_action(agent, policy):
     
     return action
     
+def compute_implied_policy(agent):
+    '''
+    Function to compute the implied policy learned by the DQ learner. 
+    ...
+    Args
+    ------
+    agent: class DrugSelector
+        after practicing is completeted
 
+    Returns numeric matrix 
+        numeric matrix encodes policy in the same way as compute_optimal__policy
+    '''
     
+    if agent.env.TRAIN_INPUT == "state_vector":
+        policy = []
+        for s in range(len(agent.env.state_vector)):
+            agent.env.state_vector = np.zeros((agent.env.N ** 2, 1))
+            agent.env.state_vector[s] = 1
+            action = np.argmax(agent.get_qs())
+            policy.append(to_categorical(action, 
+                          num_classes = len(agent.env.drugs)))
+            
+    else:  #if the train input was fitness
+        #thank goodness for list comprehension
+        #grab the last 500 observations to see what the agent was doing
+        index = [i for i in range(len(agent.master_memory))][:1000]
 
+        states = [j[3] for i,j in enumerate(agent.master_memory) if i in index]
+        
+        actions = [j[2][1] for i,j in enumerate(agent.master_memory) if i in index]
+
+        states_discrete = []
+        a_list = []
+        #need to move actions up by one so that the previous state lines up with chosen action
+        for s in range((len(states)-1)):
+            s_discrete = [i for i,j in enumerate(states[s]) if j == 1.][0]
+            a_list.append(actions[s + 1])
+            states_discrete.append(s_discrete)
+
+        #convert to pandas
+        df= pd.DataFrame({'s': states_discrete, 'a': a_list})
+        freq_table = pd.crosstab(index = df['a'], columns = df['s'])
+        policy = freq_table/freq_table.sum()
+
+    return policy
 #'main' function that iterates through simulations to train the agent
 # practice takes one argument (for now) - an agent of class `DrugSelector`
 def practice(agent, naive = False, standard_practice = False, dp_solution = False):
@@ -360,7 +407,13 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
 
         # reset environment for next iteratio
         agent.env.reset()
-    return reward_list, agent
+    if dp_solution:
+        policy = dp_policy
+    elif naive:
+        policy = []
+    else:
+        policy = compute_implied_policy(agent)
+    return reward_list, agent, policy
 
 
 
@@ -453,14 +506,15 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     naive_agent = deepcopy(agent) #otherwise it all gets overwritten by the actual agent
     if not average_outcomes:
         dp_agent = deepcopy(agent)
-        dp_rewards, dp_agent = practice(dp_agent, dp_solution = True)
+        dp_rewards, dp_agent, dp_policy = practice(dp_agent, dp_solution = True)
 
     #run the agent in the naive case and then in the reg case
-    naive_rewards, naive_agent = practice(naive_agent, naive = True, standard_practice=standard_practice)
-    rewards, agent = practice(agent, naive = False)
+    naive_rewards, naive_agent, naive_policy = practice(naive_agent, naive = True, standard_practice=standard_practice)
+    rewards, agent, policy = practice(agent, naive = False)
 
 
-    return [rewards, naive_rewards, agent, naive_agent, dp_agent, dp_rewards]
+    return [rewards, naive_rewards, agent, naive_agent, dp_agent, dp_rewards,
+            dp_policy, naive_policy, policy]
 
 #rewards = evol_deepmind()
 #naive_rewards= evol_deepmind(naive = True)

@@ -14,6 +14,7 @@ setup(
       "scipy", 
       "networkx", 
       "matplotlib", 
-      "pytest"
+      "pytest", 
+      "pandas"
     ],
 )

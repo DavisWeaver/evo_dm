@@ -1,5 +1,5 @@
-from evodm import DrugSelector, practice, hyperparameters, policy_improvement, dp_env
-from evodm.learner import compute_optimal_policy, compute_optimal_action
+from evodm import DrugSelector, practice, hyperparameters
+from evodm.learner import compute_implied_policy, compute_optimal_policy, compute_optimal_action
 import random
 import numpy as np
 import pytest
@@ -42,6 +42,18 @@ def hp_one_traj():
     return hp_one_traj
 
 @pytest.fixture
+def hp_one_traj_fitness():
+    hp_one_traj_fitness = hyperparameters()
+    hp_one_traj_fitness.TRAIN_INPUT = "fitness"
+    hp_one_traj_fitness.MIN_REPLAY_MEMORY_SIZE = 20
+    hp_one_traj_fitness.MINIBATCH_SIZE = 20
+    hp_one_traj_fitness.RESET_EVERY = 20
+    hp_one_traj_fitness.EPISODES = 100
+    hp_one_traj_fitness.AVERAGE_OUTCOMES = False
+    hp_one_traj_fitness.N = 4
+    return hp_one_traj_fitness
+
+@pytest.fixture
 def ds(hp):
     ds = DrugSelector(hp = hp)
     return ds
@@ -67,6 +79,16 @@ def ds_one_traj(hp_one_traj):
             ds_one_traj.update_replay_memory()
         ds_one_traj.env.reset()
     return ds_one_traj
+
+def ds_one_traj_fitness(hp_one_traj_fitness):
+    ds_one_traj_fitness = DrugSelector(hp=hp_one_traj_fitness)
+    for episode in range(1, ds_one_traj_fitness.hp.EPISODES + 1):
+        for i in range(1, ds_one_traj_fitness.hp.RESET_EVERY):
+            ds_one_traj_fitness.env.action = random.randint(np.min(ds_one_traj_fitness.env.ACTIONS),np.max(ds_one_traj_fitness.env.ACTIONS))
+            ds_one_traj_fitness.env.step()
+            ds_one_traj_fitness.update_replay_memory()
+        ds_one_traj_fitness.env.reset()
+    return ds_one_traj_fitness
 
 
 @pytest.fixture
@@ -256,6 +278,18 @@ def test_compute_optimal_policy(opt_policy):
 def test_compute_optimal_action(ds_one_traj, opt_policy):
     action = compute_optimal_action(agent = ds_one_traj, policy = opt_policy)
     assert action in [1,2,3,4]
+
+#test that we are getting a policy back when we use this for a state_vector trained RL
+def test_compute_implied_policy(ds_one_traj):
+    policy = compute_implied_policy(ds_one_traj)
+    bools = [np.sum(i) == 1 for i in policy]
+    assert all(bools)
+
+#test that we can compute implied policyt for fitness vector trained RL
+def test_compute_implied_policy2(ds_one_traj_fitness):
+    policy = compute_implied_policy(ds_one_traj_fitness)
+    bools = np.isclose(policy.sum(), 1.0)
+    assert all(bools)
     
 
 

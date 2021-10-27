@@ -6,6 +6,9 @@ import copy
 import itertools
 from numpy import dot
 from numpy.linalg import matrix_power
+import matplotlib as plt
+import networkx as nx
+import math
 
 class Landscape:
     """

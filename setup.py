@@ -15,6 +15,7 @@ setup(
       "networkx", 
       "matplotlib", 
       "pytest", 
-      "pandas"
+      "pandas", 
+      "math"
     ],
 )

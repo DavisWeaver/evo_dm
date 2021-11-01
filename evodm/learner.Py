@@ -425,7 +425,7 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
                 agent.hp.epsilon *= agent.hp.EPSILON_DECAY
                 agent.hp.epsilon = max(agent.hp.MIN_EPSILON, agent.hp.epsilon)
 
-        # reset environment for next iteratio
+        # reset environment for next iteration
         agent.env.reset()
     if dp_solution:
         policy = dp_policy

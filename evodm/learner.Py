@@ -243,7 +243,7 @@ class DrugSelector:
         
             for s in range(len(self.env.state_vector)):
 
-                self.env.state_vector = np.zeros((self.env.N ** 2, 1))
+                self.env.state_vector = np.zeros((2 ** self.env.N, 1))
                 self.env.state_vector[s] = 1
                 action = np.argmax(self.get_qs())
                 policy.append(to_categorical(action, 
@@ -256,7 +256,7 @@ class DrugSelector:
 
             for s in range(len(self.env.state_vector)):
 
-                state_vector = np.zeros((self.env.N ** 2, 1))
+                state_vector = np.zeros((2 ** self.env.N, 1))
                 state_vector[s] = 1
                 policy_a = np.zeros(len(self.env.ACTIONS))
 

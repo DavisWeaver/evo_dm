@@ -47,11 +47,45 @@ def hp_one_traj_fitness():
     hp_one_traj_fitness.TRAIN_INPUT = "fitness"
     hp_one_traj_fitness.MIN_REPLAY_MEMORY_SIZE = 20
     hp_one_traj_fitness.MINIBATCH_SIZE = 20
-    hp_one_traj_fitness.RESET_EVERY = 20
-    hp_one_traj_fitness.EPISODES = 100
+    hp_one_traj_fitness.RESET_EVERY = 10
+    hp_one_traj_fitness.EPISODES = 10
     hp_one_traj_fitness.AVERAGE_OUTCOMES = False
     hp_one_traj_fitness.N = 4
     return hp_one_traj_fitness
+
+@pytest.fixture
+def hp_N5():
+    hp_N5 = hyperparameters()
+    hp_N5.TRAIN_INPUT = "fitness"
+    hp_N5.MIN_REPLAY_MEMORY_SIZE = 20
+    hp_N5.MINIBATCH_SIZE = 20
+    hp_N5.RESET_EVERY = 10
+    hp_N5.EPISODES = 10
+    hp_N5.AVERAGE_OUTCOMES = False
+    hp_N5.N = 5
+    return hp_N5
+
+@pytest.fixture
+def hp_default():
+    hp_default = hyperparameters()
+    hp_default.NUM_EVOLS = 1
+    hp_default.N = 5
+    hp_default.EPISODES = 50
+    hp_default.RESET_EVERY = 200
+    hp_default.MIN_EPSILON = 0.005
+    hp_default.TRAIN_INPUT = "fitness"
+    hp_default.RANDOM_START = False
+    hp_default.NOISE = False
+    hp_default.NOISE_MODIFIER = 1
+    hp_default.NUM_DRUGS = 4
+    hp_default.SIGMA = 0.5
+    hp_default.NORMALIZE_DRUGS = True
+    hp_default.PLAYER_WCUTOFF = 0.1
+    hp_default.POP_WCUTOFF = 0.99
+    hp_default.WIN_THRESHOLD = 200
+    hp_default.WIN_REWARD = 0
+    hp_default.AVERAGE_OUTCOMES = False
+    return hp_default
 
 @pytest.fixture
 def ds(hp):
@@ -80,6 +114,7 @@ def ds_one_traj(hp_one_traj):
         ds_one_traj.env.reset()
     return ds_one_traj
 
+@pytest.fixture
 def ds_one_traj_fitness(hp_one_traj_fitness):
     ds_one_traj_fitness = DrugSelector(hp=hp_one_traj_fitness)
     for episode in range(1, ds_one_traj_fitness.hp.EPISODES + 1):
@@ -89,6 +124,29 @@ def ds_one_traj_fitness(hp_one_traj_fitness):
             ds_one_traj_fitness.update_replay_memory()
         ds_one_traj_fitness.env.reset()
     return ds_one_traj_fitness
+
+@pytest.fixture
+def ds_N5(hp_N5):
+    ds_N5 = DrugSelector(hp=hp_N5)
+    for episode in range(1, ds_N5.hp.EPISODES + 1):
+        for i in range(1, ds_N5.hp.RESET_EVERY):
+            ds_N5.env.action = random.randint(np.min(ds_N5.env.ACTIONS),np.max(ds_N5.env.ACTIONS))
+            ds_N5.env.step()
+            ds_N5.update_replay_memory()
+        ds_N5.env.reset()
+    return ds_N5
+
+@pytest.fixture
+def ds_default(hp_N5):
+    ds_default = DrugSelector(hp=hp_default)
+    for episode in range(1, ds_default.hp.EPISODES + 1):
+        for i in range(1, ds_default.hp.RESET_EVERY):
+            ds_default.env.action = random.randint(np.min(ds_default.env.ACTIONS),np.max(ds_default.env.ACTIONS))
+            ds_default.env.step()
+            ds_default.update_replay_memory()
+        ds_default.env.reset()
+    return ds_default
+
 
 
 @pytest.fixture
@@ -245,7 +303,17 @@ def test_get_qs2_state(ds_state):
     bools = [qs1[i] != qs2[i] for i in range(len(qs1))]
     bools2 = [qs1[i] != qs3[i] for i in range(len(qs1))]
     assert any([bools, bools2])
+
+
+def test_get_qs3(ds_N5):
+    qs = ds_N5.get_qs()
+    assert len(qs) == len(ds_N5.env.ACTIONS)
     
+#now with full default hyperparameters
+def test_get_qs4(ds_default):
+    qs = ds_default.get_qs()
+    assert len(qs) == len(ds_default.env.ACTIONS)
+
 def test_enumerate_batch_x(batch_enumerated):
     x = batch_enumerated[0]
     assert x.shape == (10,5) #10 is the minibatch size that we set in the hp fixture, 5 because 4 drugs + one fitness value
@@ -281,15 +349,18 @@ def test_compute_optimal_action(ds_one_traj, opt_policy):
 
 #test that we are getting a policy back when we use this for a state_vector trained RL
 def test_compute_implied_policy(ds_one_traj):
-    policy = ds_one_traj.compute_implied_policy()
+    policy = ds_one_traj.compute_implied_policy(update = False)
     bools = [np.sum(i) == 1 for i in policy]
     assert all(bools)
 
 #test that we can compute implied policyt for fitness vector trained RL
 def test_compute_implied_policy2(ds_one_traj_fitness):
-    policy = ds_one_traj.compute_implied_policy()
-    bools = np.isclose(policy.sum(), 1.0)
+    policy = ds_one_traj_fitness.compute_implied_policy(update = False)
+    bools = [np.isclose(np.sum(i),1) for i in policy]
     assert all(bools)
+
+#def test_practice(ds_one_traj_fitness):
+#    reward, agent, policy = practice(ds_one_traj_fitness, dp_solution=True)
     
 
 

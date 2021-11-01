@@ -59,9 +59,8 @@ class hyperparameters:
         self.WIN_THRESHOLD = 10 # number of player actions before the game is called
         self.WIN_REWARD = 10
 
-        # stats settings - we aren't really using these.... probably time to remove
-        self.AGGREGATE_STATS_EVERY = 1  # AGG EVERY 50 EPISODES
-        self.SHOW_PREVIEW = False 
+        # stats settings - 
+        self.AGGREGATE_STATS_EVERY = 1  #agg every episode
 
 
 # This is the class for the learning agent
@@ -250,8 +249,8 @@ class DrugSelector:
                             num_classes = len(self.env.drugs)))
                 
         else:  #if the train input was fitness
-
-            a_list = to_categorical([0,1,2,3])
+            #put together action list
+            a_list = to_categorical([i for i in range(len(self.env.ACTIONS))])
             a_list = np.ndarray.tolist(a_list)
 
             for s in range(len(self.env.state_vector)):
@@ -347,10 +346,10 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
     #every given number of episodes we are going to track the stats
     #format is [average_reward, min_reward, max_reward]
     reward_list = []
+    #initialize list of per episode rewards
+    ep_rewards = []
     for episode in tqdm(range(1, agent.hp.EPISODES + 1), ascii=True, unit='episodes'):
 
-        #initialize list of per episode rewards
-        ep_rewards = []
         # Restarting episode - reset episode reward and step number
         episode_reward = 0
 
@@ -411,7 +410,8 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
             reward_list.append([episode, average_reward, min_reward, max_reward])
 
             #update the implied policy vector
-            agent.compute_implied_policy(update = True)
+            if not any([dp_solution, naive]):
+                agent.compute_implied_policy(update = True)
 
             # Save model, but only when min reward is greater or equal a set value
             # haven't figured out what min reward is for that
@@ -432,7 +432,7 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
     elif naive:
         policy = []
     else:
-        policy = agent.compute_implied_policy()
+        policy = agent.compute_implied_policy(update = False)
     return reward_list, agent, policy
 
 def define_mira_landscapes():
@@ -466,8 +466,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   train_input = "fitness",  random_start = False, 
                   noise = False, noise_modifier = 1, num_drugs = 4, 
                   sigma = 0.5, normalize_drugs = True, 
-                  player_wcutoff = 0.7, pop_wcutoff = 0.9, win_threshold = 10,
-                  win_reward = 10, standard_practice = False, drugs = "none",
+                  player_wcutoff = 0.1, pop_wcutoff = 0.99, win_threshold = 200,
+                  win_reward = 0, standard_practice = False, drugs = "none",
                   average_outcomes = False, mira = False):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs

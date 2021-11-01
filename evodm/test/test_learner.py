@@ -1,5 +1,5 @@
 from evodm import DrugSelector, practice, hyperparameters
-from evodm.learner import compute_implied_policy, compute_optimal_policy, compute_optimal_action
+from evodm.learner import compute_optimal_policy, compute_optimal_action
 import random
 import numpy as np
 import pytest
@@ -281,13 +281,13 @@ def test_compute_optimal_action(ds_one_traj, opt_policy):
 
 #test that we are getting a policy back when we use this for a state_vector trained RL
 def test_compute_implied_policy(ds_one_traj):
-    policy = compute_implied_policy(ds_one_traj)
+    policy = ds_one_traj.compute_implied_policy()
     bools = [np.sum(i) == 1 for i in policy]
     assert all(bools)
 
 #test that we can compute implied policyt for fitness vector trained RL
 def test_compute_implied_policy2(ds_one_traj_fitness):
-    policy = compute_implied_policy(ds_one_traj_fitness)
+    policy = ds_one_traj.compute_implied_policy()
     bools = np.isclose(policy.sum(), 1.0)
     assert all(bools)
     

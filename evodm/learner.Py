@@ -271,7 +271,7 @@ class DrugSelector:
                     #find the optimal action
                     action_a = self.model.predict(tens)[0].argmax()
                     #make it categorical
-                    action_a = to_categorical(action_a, num_classes= 4)
+                    action_a = to_categorical(action_a, num_classes= len(a_list))
                     #stack it onto the policy
                     policy_a += action_a
 

@@ -96,6 +96,7 @@ class DrugSelector:
         self.replay_memory = deque(maxlen=self.hp.REPLAY_MEMORY_SIZE)
         self.master_memory = []
         self.target_update_counter = 0
+        self.policies = []
 
     def create_model(self):
 
@@ -223,13 +224,15 @@ class DrugSelector:
 
         return current_states, new_current_states
     
-    def compute_implied_policy(self):
+    def compute_implied_policy(self, update):
         '''
         Function to compute the implied policy learned by the DQ learner. 
         ...
         Args
         ------
         self: class DrugSelector
+        update: bool
+            should we update the list of implied policies? 
 
         Returns numeric matrix 
             numeric matrix encodes policy in the same way as compute_optimal__policy
@@ -275,8 +278,11 @@ class DrugSelector:
 
                 policy_a = policy_a/len(a_list)
                 policy.append(policy_a)
-
-        return policy
+        
+        if update:
+            self.policies.append([policy, self.env.episode_number])
+        else: #only return the policy if we are not updating anything
+            return policy
 
     #function to get q vector for a given state
     def get_qs(self):
@@ -404,6 +410,9 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
             max_reward = max(ep_rewards[-agent.hp.AGGREGATE_STATS_EVERY:])
             reward_list.append([episode, average_reward, min_reward, max_reward])
 
+            #update the implied policy vector
+            agent.compute_implied_policy(update = True)
+
             # Save model, but only when min reward is greater or equal a set value
             # haven't figured out what min reward is for that
             #if min_reward >= MIN_REWARD:
@@ -423,10 +432,16 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
     elif naive:
         policy = []
     else:
-        policy = compute_implied_policy(agent)
+        policy = agent.compute_implied_policy()
     return reward_list, agent, policy
 
 def define_mira_landscapes():
+    '''
+    Function to define the landscapes described in 
+    Mira PM, Crona K, Greene D, Meza JC, Sturmfels B, Barlow M (2015) 
+    Rational Design of Antibiotic Treatment Plans: A Treatment Strategy for Managing Evolution and Reversing Resistance. 
+    PLoS ONE 10(5): e0122283. https://doi.org/10.1371/journal.pone.0122283
+    '''
     drugs = []
     drugs.append([1.851, 2.082, 1.948, 2.434, 2.024, 2.198, 2.033, 0.034, 1.57, 2.165, 0.051, 0.083, 2.186, 2.322, 0.088, 2.821])    #AMP
     drugs.append([1.778, 1.782, 2.042, 1.752, 1.448, 1.544, 1.184, 0.063, 1.72, 2.008, 1.799, 2.005, 1.557, 2.247, 1.768, 2.047])    #AM

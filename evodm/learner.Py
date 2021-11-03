@@ -18,6 +18,7 @@ from copy import deepcopy
 
 # Function to set hyperparameters for the learner - just edit this any time you
 # want to screw around with them .
+#or edit directly
 
 
 class hyperparameters:

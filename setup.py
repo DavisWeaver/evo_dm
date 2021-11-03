@@ -5,7 +5,8 @@ setup(
     version='0.1.0', 
     author = 'Davis Weaver', 
     author_email = 'dtw43@case.edu',
-    packages=['evodm', "evodm.test"], 
+    packages=['evodm', "evodm.test", "evodm.learner", "evodm.landscapes",
+              "evodm.evol_game", "evodm.dpsolve"], 
     install_requires = [
       "tensorflow", 
       "keras",

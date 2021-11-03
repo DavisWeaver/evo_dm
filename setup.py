@@ -8,7 +8,7 @@ setup(
     packages=['evodm', "evodm.test"], 
     py_modules=["evodm.learner", "evodm.landscapes", "evodm.evol_game", "evodm.dpsolve"],
     install_requires = [
-      "tensorflow", 
+      "tensorflow >= 2.5.0", 
       "keras",
       "numpy",
       "tqdm",

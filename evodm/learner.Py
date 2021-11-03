@@ -411,7 +411,8 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
 
             #update the implied policy vector
             if not any([dp_solution, naive]):
-                agent.compute_implied_policy(update = True)
+                if not agent.hp.NUM_EVOLS > 1:
+                    agent.compute_implied_policy(update = True)
 
             # Save model, but only when min reward is greater or equal a set value
             # haven't figured out what min reward is for that

@@ -88,6 +88,19 @@ def hp_default():
     return hp_default
 
 @pytest.fixture
+def hp_5evols():
+    hp_5evols = hyperparameters()
+    hp_5evols.N = 5
+    hp_5evols.NUM_DRUGS = 5
+    hp_5evols.RESET_EVERY = 20
+    hp_5evols.NUM_EVOLS = 5
+    hp_5evols.TRAIN_INPUT = "fitness"
+    hp_5evols.EPISODES = 4
+    hp_5evols.AVERAGE_OUTCOMES = False
+    return hp_5evols
+
+
+@pytest.fixture
 def ds(hp):
     ds = DrugSelector(hp = hp)
     return ds
@@ -137,8 +150,19 @@ def ds_N5(hp_N5):
     return ds_N5
 
 @pytest.fixture
+def ds_evol5(hp_5evols):
+    ds_evol5 = DrugSelector(hp=hp_5evols)
+    for episode in range(1, ds_evol5.hp.EPISODES + 1):
+        for i in range(1, ds_evol5.hp.RESET_EVERY):
+            ds_evol5.env.action = random.randint(np.min(ds_evol5.env.ACTIONS),np.max(ds_evol5.env.ACTIONS))
+            ds_evol5.env.step()
+            ds_evol5.update_replay_memory()
+        ds_evol5.env.reset()
+    return ds_evol5
+
+@pytest.fixture
 def ds_default(hp_N5):
-    ds_default = DrugSelector(hp=hp_default)
+    ds_default = DrugSelector(hp=hp_N5)
     for episode in range(1, ds_default.hp.EPISODES + 1):
         for i in range(1, ds_default.hp.RESET_EVERY):
             ds_default.env.action = random.randint(np.min(ds_default.env.ACTIONS),np.max(ds_default.env.ACTIONS))
@@ -159,6 +183,7 @@ def ds_replay(hp):
             ds_replay.update_replay_memory()
         ds_replay.env.reset()
     return ds_replay
+
 
 
 @pytest.fixture
@@ -358,6 +383,7 @@ def test_compute_implied_policy2(ds_one_traj_fitness):
     policy = ds_one_traj_fitness.compute_implied_policy(update = False)
     bools = [np.isclose(np.sum(i),1) for i in policy]
     assert all(bools)
+
 
 #def test_practice(ds_one_traj_fitness):
 #    reward, agent, policy = practice(ds_one_traj_fitness, dp_solution=True)

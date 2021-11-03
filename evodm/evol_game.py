@@ -2,6 +2,7 @@ from evodm.landscapes import Landscape
 import numpy as np
 from tensorflow.keras.utils import to_categorical
 import math
+from itertools import chain
 # Functions to convert data describing bacterial evolution sim into a format
 # that can be used by the learner
 
@@ -174,13 +175,29 @@ class evol_env:
         return
 
     def convert_fitness(self, fitness): 
+        #convert to lists
+        prev_fitness = np.ndarray.tolist(self.fitness)
+        fitness = np.ndarray.tolist(fitness)
 
         prev_action_cat = to_categorical(self.prev_action-1, num_classes = len(self.ACTIONS)) #-1 because of the dumb python indexing system
         prev_action_cat = np.ndarray.tolist(prev_action_cat) #convert to list
-        prev_action_cat.append(self.fitness)
+
+        #This checks if fitness is a list (will occur if num_evols > 1)
+        if isinstance(prev_fitness, list):
+        #append fitness values
+            for i in range(len(prev_fitness)):
+                prev_action_cat.append(prev_fitness[i])
+        else:
+            prev_action_cat.append(prev_fitness)
+
         action_cat = to_categorical(self.action-1, num_classes = len(self.ACTIONS))
         action_cat = np.ndarray.tolist(action_cat)
-        action_cat.append(fitness)
+         #This checks if fitness is a list (will occur if num_evols > 1)
+        if isinstance(fitness, list):  
+            for i in range(len(fitness)):
+                action_cat.append(fitness[i])  
+        else:
+            action_cat.append(fitness)
 
         return prev_action_cat, action_cat
 

@@ -6,9 +6,8 @@ setup(
     author = 'Davis Weaver', 
     author_email = 'dtw43@case.edu',
     packages=['evodm', "evodm.test"], 
-    py_modules=["evodm.learner", "evodm.landscapes", "evodm.evol_game", "evodm.dpsolve"],
     install_requires = [
-      "tensorflow >= 2.5.0", 
+      "tensorflow >= 2.50", 
       "keras",
       "numpy",
       "tqdm",

@@ -7,8 +7,6 @@ from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 from collections import deque
-
-from tensorflow.python.ops.gen_array_ops import deep_copy
 from evodm.evol_game import evol_env
 from evodm.dpsolve import dp_env, policy_improvement
 import random

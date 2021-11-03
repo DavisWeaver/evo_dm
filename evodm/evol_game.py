@@ -176,8 +176,9 @@ class evol_env:
 
     def convert_fitness(self, fitness): 
         #convert to lists
-        prev_fitness = np.ndarray.tolist(self.fitness)
-        fitness = np.ndarray.tolist(fitness)
+        if self.NUM_EVOLS > 1:
+            prev_fitness = np.ndarray.tolist(self.fitness)
+            fitness = np.ndarray.tolist(fitness)
 
         prev_action_cat = to_categorical(self.prev_action-1, num_classes = len(self.ACTIONS)) #-1 because of the dumb python indexing system
         prev_action_cat = np.ndarray.tolist(prev_action_cat) #convert to list

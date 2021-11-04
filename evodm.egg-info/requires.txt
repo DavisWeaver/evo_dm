@@ -1,4 +1,4 @@
-tensorflow
+tensorflow>=2.5.0
 keras
 numpy
 tqdm

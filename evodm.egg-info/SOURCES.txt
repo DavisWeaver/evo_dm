@@ -4,7 +4,6 @@ evodm/__init__.py
 evodm/dpsolve.py
 evodm/evol_game.py
 evodm/landscapes.py
-evodm/learner.Py
 evodm/learner.py
 evodm.egg-info/PKG-INFO
 evodm.egg-info/SOURCES.txt

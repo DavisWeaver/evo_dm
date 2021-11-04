@@ -1,3 +1,7 @@
+name: run all tests
+
+on: [push]
+
 language: python
 # python versions to use during the tests
 python:

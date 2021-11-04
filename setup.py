@@ -7,8 +7,8 @@ setup(
     author_email = 'dtw43@case.edu',
     packages=['evodm', "evodm.test"], 
     install_requires = [
-      "tensorflow>=2.5.0", 
-      "keras",
+      "tensorflow~=2.6.1", 
+      "keras~=2.6.0",
       "numpy",
       "tqdm",
       "scipy", 

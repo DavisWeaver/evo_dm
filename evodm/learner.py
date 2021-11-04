@@ -4,10 +4,11 @@
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
-from keras.optimizers import Adam
-from keras.utils import to_categorical
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import to_categorical
 from collections import deque
-from evodm import evol_env, dp_env, policy_improvement
+from evodm.evol_game import evol_env
+from evodm.dpsolve import dp_env, policy_improvement
 import random
 import numpy as np 
 from tqdm import tqdm

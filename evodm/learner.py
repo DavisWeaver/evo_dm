@@ -51,12 +51,12 @@ class hyperparameters:
         self.NUM_DRUGS = 4
 
         #define victory conditions for player and pop
-        self.PLAYER_WCUTOFF = 0.7
-        self.POP_WCUTOFF = 0.9
+        self.PLAYER_WCUTOFF = 0.001
+        self.POP_WCUTOFF = 0.999
 
         #define victory threshold
-        self.WIN_THRESHOLD = 10 # number of player actions before the game is called
-        self.WIN_REWARD = 10
+        self.WIN_THRESHOLD = 1000 # number of player actions before the game is called
+        self.WIN_REWARD = 0
 
         # stats settings - 
         self.AGGREGATE_STATS_EVERY = 1  #agg every episode

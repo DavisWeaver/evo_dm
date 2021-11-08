@@ -30,7 +30,7 @@ class hyperparameters:
         self.TRAIN_INPUT = "state_vector"
         
         # Exploration settings
-        self.DISCOUNT = 0.9  # also still working out what this really means
+        self.DISCOUNT = 0.4  # also still working out what this really means
         self.epsilon = 1  # lowercase because its not a constant
         self.EPSILON_DECAY = 0.95
         self.MIN_EPSILON = 0.001
@@ -109,7 +109,7 @@ class DrugSelector:
             model.add(Flatten())
         elif self.hp.TRAIN_INPUT == "fitness":
             #have to change the kernel size because of the weird difference in environment shape
-            model.add(Dense(28, activation="relu",
+            model.add(Dense(64, activation="relu",
                          input_shape=self.env.ENVIRONMENT_SHAPE))
         elif self.hp.TRAIN_INPUT == "pop_size":
             model.add(Conv1D(64, 3, activation="relu",
@@ -475,13 +475,15 @@ def mdp_mira_sweep(num_evals, episodes = 10):
     discount_range = [i/num_evals for i in range(num_evals)]
 
     mem_list = []
+    policy_list = []
     for i in iter(discount_range):
         agent_i = deepcopy(agent)
         rewards_i, agent_i, policy_i = practice(agent_i, dp_solution = True, discount_rate= i)
         mem_i = agent_i.master_memory
         mem_list.append([mem_i, i])
+        policy_list.append(policy_i)
     
-    return mem_list
+    return [mem_list, policy_list]
 
 
 def evol_deepmind(num_evols = 1, N = 5, episodes = 50,

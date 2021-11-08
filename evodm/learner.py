@@ -297,7 +297,7 @@ class DrugSelector:
 
         return self.model.predict(tens)[0]
     
-def compute_optimal_policy(agent):
+def compute_optimal_policy(agent, discount_rate):
     '''
     Function to compute optimal policy based on reinforcement learning problem defined by the class DrugSelector
     ...
@@ -312,7 +312,7 @@ def compute_optimal_policy(agent):
     env = dp_env(N = agent.env.N, sigma = agent.env.sigma, 
                  drugs = agent.env.drugs, num_drugs= len(agent.env.drugs))
     
-    policy, V = policy_improvement(env = env)
+    policy, V = policy_improvement(env = env, discount_factor= discount_rate)
 
     return policy
 
@@ -338,9 +338,9 @@ def compute_optimal_action(agent, policy):
     
 #'main' function that iterates through simulations to train the agent
 # practice takes one argument (for now) - an agent of class `DrugSelector`
-def practice(agent, naive = False, standard_practice = False, dp_solution = False):
+def practice(agent, naive = False, standard_practice = False, dp_solution = False, discount_rate = 0.99):
     if dp_solution:
-        dp_policy = compute_optimal_policy(agent)
+        dp_policy = compute_optimal_policy(agent, discount_rate = discount_rate)
 
     #every given number of episodes we are going to track the stats
     #format is [average_reward, min_reward, max_reward]

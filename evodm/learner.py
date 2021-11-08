@@ -297,7 +297,7 @@ class DrugSelector:
 
         return self.model.predict(tens)[0]
     
-def compute_optimal_policy(agent, discount_rate):
+def compute_optimal_policy(agent, discount_rate = 0.99):
     '''
     Function to compute optimal policy based on reinforcement learning problem defined by the class DrugSelector
     ...

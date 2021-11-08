@@ -1,5 +1,5 @@
 from evodm import DrugSelector, practice, hyperparameters
-from evodm.learner import compute_optimal_policy, compute_optimal_action
+from evodm.learner import compute_optimal_policy, compute_optimal_action, mdp_mira_sweep
 import random
 import numpy as np
 import pytest
@@ -388,7 +388,13 @@ def test_compute_implied_policy2(ds_one_traj_fitness):
 #def test_practice(ds_one_traj_fitness):
 #    reward, agent, policy = practice(ds_one_traj_fitness, dp_solution=True)
     
+def test_mdp_mira_sweep():
+    mem_list = mdp_mira_sweep(num_evals = 10)
+    assert len(mem_list) == 10
 
-
-
+def test_mdp_mira_sweep2():
+    mem_list = mdp_mira_sweep(num_evals = 10)
+    gammas = [i[1] for i in mem_list]
+    target_gammas = [i/10 for i in range(10)]
+    np.testing.assert_array_equal(gammas, target_gammas)
 

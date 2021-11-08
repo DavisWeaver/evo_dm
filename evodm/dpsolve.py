@@ -1,5 +1,6 @@
 from evodm.evol_game import *
 from evodm.landscapes import Landscape
+from copy import deepcopy
 import numpy as np
 
 class dp_env:
@@ -243,3 +244,4 @@ def policy_improvement(env, policy_eval_fn=policy_eval, discount_factor=0.99):
         # If the policy is stable we've found an optimal policy. Return it
         if policy_stable:
             return policy, V
+

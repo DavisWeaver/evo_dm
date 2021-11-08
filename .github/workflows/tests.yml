@@ -5,51 +5,30 @@ on: [push, pull_request]
 
 # define the jobs
 jobs:
-  job_one:
-    name: windows_tests
-    build: 
-      runs-on: windows-latest
-      strategy:
-            matrix:
-              python-version: ['3.7', '3.8', '3.9'] # install the python version needed
-      steps: 
-        - name: checkout repo content
-          uses: actions/checkout@v2 # checkout the repository content to github runner
+  unit-tests:
+    name: ${{ matrix.config.os }} (${{ matrix.config.py }})
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config: 
+        - {os: windows-latest, py: '3.7'}
+        - {os: macOS-latest, py: '3.7'}
+        - {os: ubuntu-latest, py: '3.7'}
+        - {os: ubuntu-latest, py: '3.8'}
+        - {os: ubuntu-latest, py: '3.9'}
+    steps: 
+      - name: checkout repo content
+        uses: actions/checkout@v2 # checkout the repository content to github runner
 
-        - name: setup python
-          uses: actions/setup-python@v2
-          with:
-            python-version: "${{ matrix.python-version }}"
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "${{ matrix.config.py }}"
 
-        - name: install dependencies
-          run: |
-            python -m pip install --upgrade pip
-            pip install .
-        - name: run pytest for ${{ matrix.python-version }}
-          run: pytest
+      - name: install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+      - name: run pytest for ${{ matrix.python-version }}
+        run: pytest
 
-  job_two: 
-    name: ubuntu_tests
-    build:
-      runs-on: ubuntu-latest
-      
-      strategy:
-          matrix:
-            python-version: ['3.7', '3.8', '3.9'] # install the python version needed
-      steps:
-
-        - name: checkout repo content
-          uses: actions/checkout@v2 # checkout the repository content to github runner
-
-        - name: setup python
-          uses: actions/setup-python@v2
-          with:
-            python-version: "${{ matrix.python-version }}"
-
-        - name: install dependencies
-          run: |
-            python -m pip install --upgrade pip
-            pip install .
-            
-        - name: run pytest for ${{ matrix.python-version }}
-          run: pytest

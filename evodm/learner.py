@@ -578,7 +578,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     naive_agent = deepcopy(agent) #otherwise it all gets overwritten by the actual agent
     if not average_outcomes:
         dp_agent = deepcopy(agent)
-        dp_rewards, dp_agent, dp_policy = practice(dp_agent, dp_solution = True)
+        dp_rewards, dp_agent, dp_policy = practice(dp_agent, dp_solution = True, 
+                                                   discount_rate= hp.DISCOUNT)
 
     #run the agent in the naive case and then in the reg case
     naive_rewards, naive_agent, naive_policy = practice(naive_agent, naive = True, standard_practice=standard_practice)

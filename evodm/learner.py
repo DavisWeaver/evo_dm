@@ -347,7 +347,8 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
     reward_list = []
     #initialize list of per episode rewards
     ep_rewards = []
-    for episode in tqdm(range(1, agent.hp.EPISODES + 1), ascii=True, unit='episodes'):
+    for episode in tqdm(range(1, agent.hp.EPISODES + 1), ascii=True, unit='episodes', 
+                        disable = True if dp_solution else False):
 
         # Restarting episode - reset episode reward and step number
         episode_reward = 0
@@ -470,18 +471,20 @@ def mdp_mira_sweep(num_evals, episodes = 10):
 
     drugs = define_mira_landscapes()
 
-    agent = DrugSelector(hp = hp, drugs = drugs)
-
     discount_range = [i/num_evals for i in range(num_evals)]
+    reset_every_range = [i for i in range(5, 5*num_evals + 5,  5)]
 
     mem_list = []
     policy_list = []
     for i in iter(discount_range):
-        agent_i = deepcopy(agent)
-        rewards_i, agent_i, policy_i = practice(agent_i, dp_solution = True, discount_rate= i)
-        mem_i = agent_i.master_memory
-        mem_list.append([mem_i, i])
-        policy_list.append(policy_i)
+        for j in iter(reset_every_range):
+            hp.RESET_EVERY = j
+            agent = DrugSelector(hp = hp, drugs = drugs)
+            agent_i = deepcopy(agent)
+            rewards_i, agent_i, policy_i = practice(agent_i, dp_solution = True, discount_rate= i)
+            mem_i = agent_i.master_memory
+            mem_list.append([mem_i, i, j])
+            policy_list.append([policy_i, i, j])
     
     return [mem_list, policy_list]
 

@@ -16,5 +16,5 @@ setup(
       "matplotlib", 
       "pytest", 
     ],
-    python_requires='>= 3.6.2, <=3.9.7'
+    python_requires='>= 3.6.0, <=3.9.11'
 )

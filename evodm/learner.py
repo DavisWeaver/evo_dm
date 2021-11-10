@@ -461,7 +461,7 @@ def define_mira_landscapes():
     drugs.append([2.59, 2.572, 2.393, 2.832, 2.44, 2.808, 2.652, 0.611, 2.067, 2.446, 2.957, 2.633, 2.735, 2.863, 2.796, 3.203])     #FEP
     return drugs
 
-def mdp_mira_sweep(num_evals, episodes = 10):
+def mdp_mira_sweep(num_evals, episodes = 10, start_gamma = 0, stop_gamma = 1, start_reset = 5, stop_reset = 100):
 
     hp = hyperparameters()
     hp.EPISODES = episodes
@@ -471,13 +471,13 @@ def mdp_mira_sweep(num_evals, episodes = 10):
 
     drugs = define_mira_landscapes()
 
-    discount_range = [i/num_evals for i in range(num_evals)]
-    reset_every_range = [i for i in range(5, 5*num_evals + 5,  5)]
-
+    discount_range = np.linspace(start_gamma, stop_gamma, num = num_evals)
+    reset_every_range = np.linspace(start_reset, stop_reset, num_evals)
     mem_list = []
     policy_list = []
     for i in iter(discount_range):
         for j in iter(reset_every_range):
+            j = int(j)
             hp.RESET_EVERY = j
             agent = DrugSelector(hp = hp, drugs = drugs)
             agent_i = deepcopy(agent)

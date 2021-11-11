@@ -461,8 +461,10 @@ def define_mira_landscapes():
     drugs.append([2.59, 2.572, 2.393, 2.832, 2.44, 2.808, 2.652, 0.611, 2.067, 2.446, 2.957, 2.633, 2.735, 2.863, 2.796, 3.203])     #FEP
     return drugs
 
-def mdp_mira_sweep(num_evals, episodes = 10, start_gamma = 0, stop_gamma = 1, start_reset = 5, stop_reset = 100):
+def mdp_mira_sweep(num_evals, episodes = 10, start_gamma = 0, stop_gamma = 0.99, start_reset = 5, stop_reset = 100):
 
+    if stop_gamma == 1.: 
+        stop_gamma = 0.999
     hp = hyperparameters()
     hp.EPISODES = episodes
     hp.RESET_EVERY = 20

@@ -4,5 +4,5 @@ numpy
 tqdm
 scipy
 networkx
-matplotlib
+matplotlib~=3.3.4
 pytest

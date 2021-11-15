@@ -8,4 +8,4 @@ Author-email: dtw43@case.edu
 License: UNKNOWN
 Description: UNKNOWN
 Platform: UNKNOWN
-Requires-Python: >= 3.6.2, <=3.9.7
+Requires-Python: >= 3.6.0, <=3.9.11

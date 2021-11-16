@@ -1,5 +1,5 @@
 import pytest
-from evodm import dp_env, policy_improvement, value_iteration
+from evodm import dp_env, policy_improvement, value_iteration, backwards_induction
 
 @pytest.fixture
 def env():
@@ -19,3 +19,8 @@ def test_P_probs(env):
     bools = [i == 1.0 for i in probs]
 
     assert all(bools)
+
+def test_backwards_induction(env):
+    policy, V = backwards_induction(env)
+    policy.shape
+    assert policy.shape == (16,20)

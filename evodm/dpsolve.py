@@ -1,6 +1,7 @@
 from evodm.evol_game import *
 from evodm.landscapes import Landscape
 from copy import deepcopy
+from mdptoolbox.mdp import FiniteHorizon
 import numpy as np
 
 class dp_env:
@@ -29,6 +30,8 @@ class dp_env:
 
             ## Select landscapes corresponding to 4 different drug regimes
             drugs = define_drugs(landscapes, num_drugs = num_drugs)
+            ## Normalize landscapes
+            drugs = normalize_landscapes(drugs)
         
         self.drugs = drugs #need these later to compute reward
         #define the landscapes
@@ -41,6 +44,9 @@ class dp_env:
         self.nA = num_drugs
         #define P
         self.P = self.define_P()
+        #define R
+        self.R = self.define_R()
+        self.tm = self.clean_tm()
         
         #define initial state distribution
         self.isd = np.zeros(self.nS)
@@ -77,7 +83,72 @@ class dp_env:
                 P[s][a] = p_list 
                         
         return P
+    
+    def define_R(self):
+        """
+        Method to define a reward matrix R
+    
+        Args:
+            self: inherits necessary arguments from parent class
+        
+        Returns:
+            List of lists where R[a][s] yields r(s|a)
+        """
+        R = []
+        for s in range(self.nS):
+            R_s = []
+            for j in range(len(self.drugs)):
+                R_j = 1 - self.drugs[j][s]
+                R_s.append(R_j)
+            R_s = np.asarray(R_s)
+            R.append(R_s)
+        R = np.asarray(R)
+        return R
 
+    def clean_tm(self):
+        """
+        Method to transpose the transition matrix for each action a 
+        because Jeff defined it in a dumb way
+        Args:
+            self: inherits necessary arguments from parent class
+        
+        Returns:
+           array of matrices where tm[A] yields p(s'|s)
+        """
+        new_tm = []
+        for a in range(self.nA):
+            tm_a = np.transpose(self.tm[a])
+            new_tm.append(tm_a)
+        tm = np.asarray(new_tm)
+        return tm
+
+        
+
+
+def backwards_induction(env, num_steps = 20, discount_factor = 0.99):
+    """
+    Backwards induction for finite horizon MDPs. Mostly a compatibility function for mdptoolbox.mdp.FiniteHorizon
+    
+    Args:
+        env: dp_env defined above - defines the markov decision process 
+            for the problem of drug cycling to treat a population evolving on fitness landscapes
+            env.P[s][a] is a list of transition tuples (prob, next_state, reward, done).
+            env.nS is a number of states in the environment. 
+            env.nA is a number of actions in the environment.
+        num_steps: what is the time horizon? defaults to 20
+        discount_factor: Gamma discount factor.
+        
+    Returns:
+        A tuple (policy, V) of the optimal policy and the optimal value function.
+    """
+    P = env.tm
+    R = env.R
+
+    fh = FiniteHorizon(transitions = P, reward = R, 
+                                   discount = discount_factor, N = num_steps)
+    fh.run()
+
+    return fh.policy, fh.V
 
 
 def value_iteration(env, theta=0.0001, discount_factor=0.99):

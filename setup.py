@@ -15,7 +15,7 @@ setup(
       "networkx", 
       "matplotlib~=3.3.4", 
       "pytest", 
-      "mdptoolbox"
+      "pymdptoolbox"
     ],
     python_requires='>= 3.6.0, <=3.9.11'
 )

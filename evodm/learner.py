@@ -30,7 +30,7 @@ class hyperparameters:
         self.TRAIN_INPUT = "state_vector"
         
         # Exploration settings
-        self.DISCOUNT = 0.4  # also still working out what this really means
+        self.DISCOUNT = 0.99  
         self.epsilon = 1  # lowercase because its not a constant
         self.EPSILON_DECAY = 0.95
         self.MIN_EPSILON = 0.001
@@ -498,7 +498,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   sigma = 0.5, normalize_drugs = True, 
                   player_wcutoff = 0.1, pop_wcutoff = 0.99, win_threshold = 200,
                   win_reward = 0, standard_practice = False, drugs = "none",
-                  average_outcomes = False, mira = False):
+                  average_outcomes = False, mira = False, gamma = 0.99):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
     to try and minimize the fitness of a population evolving on a landscape.
@@ -551,6 +551,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
         should the comparison group give a random drug until fitness approaches 
         some maximum and then randomly switch to another available drug?
     average_outcomes: bool
+    gamma: float
+        discount rate
     """
     #initialize hyperparameters - and edit them according to the user inputs
     hp = hyperparameters()
@@ -571,6 +573,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     hp.WIN_THRESHOLD = int(win_threshold)
     hp.WIN_REWARD = win_reward
     hp.AVERAGE_OUTCOMES = average_outcomes
+    hp.DISCOUNT = gamma
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes

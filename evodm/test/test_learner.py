@@ -365,11 +365,14 @@ def opt_policy(ds_one_traj):
     return opt_policy
 
 def test_compute_optimal_policy(opt_policy):
-    bools = [np.sum(i) == 1 for i in opt_policy]
+    bools = []
+    for i in range(len(opt_policy)):
+        bools_i = [j in [0,1,2,3] for j in opt_policy[i]]
+        bools.append(bools_i)
     assert all(bools)
 
 def test_compute_optimal_action(ds_one_traj, opt_policy):
-    action = compute_optimal_action(agent = ds_one_traj, policy = opt_policy)
+    action = compute_optimal_action(agent = ds_one_traj, policy = opt_policy, step = 2)
     assert action in [1,2,3,4]
 
 #test that we are getting a policy back when we use this for a state_vector trained RL
@@ -391,6 +394,6 @@ def test_practice(ds_one_traj_fitness):
     
 def test_mdp_mira_sweep():
     mem_list = mdp_mira_sweep(num_evals = 10)[0]
-    assert len(mem_list) == 10**2
+    assert len(mem_list) == 10
 
 

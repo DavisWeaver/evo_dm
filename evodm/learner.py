@@ -8,7 +8,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 from collections import deque
 from evodm.evol_game import evol_env
-from evodm.dpsolve import dp_env, policy_improvement
+from evodm.dpsolve import backwards_induction, dp_env
 import random
 import numpy as np 
 from tqdm import tqdm
@@ -297,7 +297,7 @@ class DrugSelector:
 
         return self.model.predict(tens)[0]
     
-def compute_optimal_policy(agent, discount_rate = 0.99):
+def compute_optimal_policy(agent, discount_rate = 0.99, num_steps = 20):
     '''
     Function to compute optimal policy based on reinforcement learning problem defined by the class DrugSelector
     ...
@@ -312,12 +312,12 @@ def compute_optimal_policy(agent, discount_rate = 0.99):
     env = dp_env(N = agent.env.N, sigma = agent.env.sigma, 
                  drugs = agent.env.drugs, num_drugs= len(agent.env.drugs))
     
-    policy, V = policy_improvement(env = env, discount_factor= discount_rate)
+    policy, V = backwards_induction(env = env, discount_factor= discount_rate, num_steps=num_steps)
 
     return policy
 
 
-def compute_optimal_action(agent, policy):
+def compute_optimal_action(agent, policy, step):
     '''
     Function to compute the optimal action based on a deterministic policy. 
     ...
@@ -331,16 +331,16 @@ def compute_optimal_action(agent, policy):
         corresponding to optimal action
     '''
     
-    index = [i for i,j in enumerate(agent.env.state_vector) if j == 1.]
-    action = np.argmax(policy[index]) + 1 #plus one because I made the bad decision to force the actions to be 1,2,3,4 once upon a time
+    index = [i for i,j in enumerate(agent.env.state_vector) if j == 1.][0]
+    action = policy[index][step] + 1 #plus one because I made the bad decision to force the actions to be 1,2,3,4 once upon a time
     
     return action
     
 #'main' function that iterates through simulations to train the agent
-# practice takes one argument (for now) - an agent of class `DrugSelector`
 def practice(agent, naive = False, standard_practice = False, dp_solution = False, discount_rate = 0.99):
     if dp_solution:
-        dp_policy = compute_optimal_policy(agent, discount_rate = discount_rate)
+        dp_policy = compute_optimal_policy(agent, discount_rate = discount_rate,
+                                           num_steps = agent.hp.RESET_EVERY)
 
     #every given number of episodes we are going to track the stats
     #format is [average_reward, min_reward, max_reward]
@@ -353,7 +353,7 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
         # Restarting episode - reset episode reward and step number
         episode_reward = 0
 
-        for i in range(1, agent.hp.RESET_EVERY):
+        for i in range(agent.hp.RESET_EVERY):
 
             # This part stays mostly the same, the change is to query a model for Q values
             if np.random.random() > agent.hp.epsilon:
@@ -367,7 +367,7 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
                     else: 
                         agent.env.action = random.randint(np.min(agent.env.ACTIONS),np.max(agent.env.ACTIONS))
                 elif dp_solution:
-                    agent.env.action = compute_optimal_action(agent, dp_policy)
+                    agent.env.action = compute_optimal_action(agent, dp_policy, step = i)
                 else:
                     agent.env.action = np.argmax(agent.get_qs()) + 1 #plus one because of the stupid fucking indexing system
             else:
@@ -378,7 +378,7 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
                         avail_actions = [action for action in agent.env.ACTIONS if action != agent.env.action] #grab all actions except the one currently selected
                         agent.env.action = random.sample(avail_actions, k = 1)[0] #need to take the first element of the list because thats how random.sample outputs it
                 elif dp_solution:
-                    agent.env.action = compute_optimal_action(agent, dp_policy)
+                    agent.env.action = compute_optimal_action(agent, dp_policy, step = i)
                 else: 
                     agent.env.action = random.randint(np.min(agent.env.ACTIONS),np.max(agent.env.ACTIONS))
 
@@ -388,7 +388,7 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
 
             # Transform new continous state to new discrete state and count reward
             # can't do this after just 1 step because there won't be anything in the sensor
-            if i != 1:
+            if i != 0:
                 reward = agent.env.sensor[2]
                 episode_reward += reward
 
@@ -461,10 +461,8 @@ def define_mira_landscapes():
     drugs.append([2.59, 2.572, 2.393, 2.832, 2.44, 2.808, 2.652, 0.611, 2.067, 2.446, 2.957, 2.633, 2.735, 2.863, 2.796, 3.203])     #FEP
     return drugs
 
-def mdp_mira_sweep(num_evals, episodes = 10, start_gamma = 0, stop_gamma = 0.99, start_reset = 5, stop_reset = 100):
-
-    if stop_gamma == 1.: 
-        stop_gamma = 0.999
+def mdp_mira_sweep(num_evals, episodes = 10):
+    #Define Drug selector class for this situation
     hp = hyperparameters()
     hp.EPISODES = episodes
     hp.RESET_EVERY = 20
@@ -473,21 +471,17 @@ def mdp_mira_sweep(num_evals, episodes = 10, start_gamma = 0, stop_gamma = 0.99,
 
     drugs = define_mira_landscapes()
 
-    discount_range = np.linspace(start_gamma, stop_gamma, num = num_evals)
-    reset_every_range = np.linspace(start_reset, stop_reset, num_evals)
+    discount_range = np.linspace(0.0001, 0.999, num = num_evals)
     mem_list = []
     policy_list = []
     for i in iter(discount_range):
-        for j in iter(reset_every_range):
-            j = int(j)
-            hp.RESET_EVERY = j
-            agent = DrugSelector(hp = hp, drugs = drugs)
-            agent_i = deepcopy(agent)
-            rewards_i, agent_i, policy_i = practice(agent_i, dp_solution = True, discount_rate= i)
-            mem_i = agent_i.master_memory
-            mem_list.append([mem_i, i, j])
-            policy_list.append([policy_i, i, j])
-    
+        agent = DrugSelector(hp = hp, drugs = drugs)
+        agent_i = deepcopy(agent)
+        rewards_i, agent_i, policy_i = practice(agent_i, dp_solution = True, discount_rate= i)
+        mem_i = agent_i.master_memory
+        mem_list.append([mem_i, i])
+        policy_list.append([policy_i, i])
+
     return [mem_list, policy_list]
 
 

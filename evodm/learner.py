@@ -462,7 +462,12 @@ def define_mira_landscapes():
     return drugs
 
 def mdp_mira_sweep(num_evals, episodes = 10):
-    #Define Drug selector class for this situation
+    '''
+    Function to evaluate performance of the MDP optimal for different discount_rates (gamma)
+    Args:
+        num_evals: how many gamma parameters to test
+        episodes: how many episodes should be evaluated per gamma parameter
+    '''
     hp = hyperparameters()
     hp.EPISODES = episodes
     hp.RESET_EVERY = 20
@@ -492,7 +497,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   sigma = 0.5, normalize_drugs = True, 
                   player_wcutoff = 0.1, pop_wcutoff = 0.99, win_threshold = 200,
                   win_reward = 0, standard_practice = False, drugs = "none",
-                  average_outcomes = False, mira = False, gamma = 0.99):
+                  average_outcomes = False, mira = False, gamma = 0.99,
+                  learning_rate = 0.001):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
     to try and minimize the fitness of a population evolving on a landscape.
@@ -547,6 +553,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     average_outcomes: bool
     gamma: float
         discount rate
+    learning_rate: float
     """
     #initialize hyperparameters - and edit them according to the user inputs
     hp = hyperparameters()
@@ -568,6 +575,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     hp.WIN_REWARD = win_reward
     hp.AVERAGE_OUTCOMES = average_outcomes
     hp.DISCOUNT = gamma
+    hp.LEARNING_RATE = learning_rate
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes

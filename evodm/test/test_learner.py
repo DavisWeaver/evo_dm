@@ -1,5 +1,5 @@
 from evodm import DrugSelector, practice, hyperparameters
-from evodm.learner import compute_optimal_policy, compute_optimal_action, mdp_mira_sweep
+from evodm.learner import compute_optimal_policy, compute_optimal_action, define_mira_landscapes, mdp_mira_sweep
 import random
 import numpy as np
 import pytest
@@ -391,6 +391,19 @@ def test_compute_implied_policy2(ds_one_traj_fitness):
 def test_practice(ds_one_traj_fitness):
     reward, agent, policy = practice(ds_one_traj_fitness, dp_solution=True)
     reward, agent, policy = practice(ds_one_traj_fitness, naive=True)
+
+@pytest.fixture 
+def ds_mira():
+    hp = hyperparameters()
+    hp.N = 4
+    drugs = define_mira_landscapes()
+    hp.NUM_DRUGS = 15
+    ds_mira = DrugSelector(hp = hp, drugs = drugs)
+    return ds_mira
+
+def test_mira_practice(ds_mira):
+    reward, agent, policy = practice(ds_mira, dp_solution=True)
+    reward, agent, policy = practice(ds_mira, naive=True)
     
 def test_mdp_mira_sweep():
     mem_list = mdp_mira_sweep(num_evals = 10)[0]

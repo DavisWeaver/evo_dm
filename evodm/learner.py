@@ -4,6 +4,7 @@
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
+from numpy.lib.utils import deprecate
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 from collections import deque
@@ -312,10 +313,9 @@ def compute_optimal_policy(agent, discount_rate = 0.99, num_steps = 20):
     env = dp_env(N = agent.env.N, sigma = agent.env.sigma, 
                  drugs = agent.env.drugs, num_drugs= len(agent.env.drugs))
     
-    policy, V = backwards_induction(env = env, discount_factor= discount_rate, num_steps=num_steps)
+    policy, V = backwards_induction(env = env, discount_rate= discount_rate, num_steps=num_steps)
 
     return policy
-
 
 def compute_optimal_action(agent, policy, step):
     '''
@@ -340,7 +340,7 @@ def compute_optimal_action(agent, policy, step):
 def practice(agent, naive = False, standard_practice = False, dp_solution = False, discount_rate = 0.99):
     if dp_solution:
         dp_policy = compute_optimal_policy(agent, discount_rate = discount_rate,
-                                           num_steps = agent.hp.RESET_EVERY)
+                                          num_steps = agent.hp.RESET_EVERY)
 
     #every given number of episodes we are going to track the stats
     #format is [average_reward, min_reward, max_reward]
@@ -475,14 +475,14 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20):
     hp.NUM_DRUGS = 15
 
     drugs = define_mira_landscapes()
+    agent = DrugSelector(hp = hp, drugs = drugs)
 
     discount_range = np.linspace(0.0001, 0.999, num = num_evals)
     mem_list = []
     policy_list = []
+
     for i in iter(discount_range):
-        agent = DrugSelector(hp = hp, drugs = drugs)
-        agent_i = deepcopy(agent)
-        rewards_i, agent_i, policy_i = practice(agent_i, dp_solution = True, discount_rate= i)
+        rewards_i, agent_i, policy_i = practice(deepcopy(agent), dp_solution = True, discount_rate = i)
         mem_i = agent_i.master_memory
         mem_list.append([mem_i, i])
         policy_list.append([policy_i, i])

@@ -125,7 +125,7 @@ class dp_env:
         
 
 
-def backwards_induction(env, num_steps = 20, discount_factor = 0.99):
+def backwards_induction(env, num_steps = 20, discount_rate = 0.99):
     """
     Backwards induction for finite horizon MDPs. Mostly a compatibility function for mdptoolbox.mdp.FiniteHorizon
     
@@ -145,10 +145,14 @@ def backwards_induction(env, num_steps = 20, discount_factor = 0.99):
     R = env.R
 
     fh = FiniteHorizon(transitions = P, reward = R, 
-                                   discount = discount_factor, N = num_steps)
-    fh.run()
+                                   discount = discount_rate, N = num_steps)
 
-    return fh.policy, fh.V
+    fh.run()
+    policy = fh.policy
+    V = fh.V
+    del fh
+
+    return policy, V
 
 
 def value_iteration(env, theta=0.0001, discount_factor=0.99):

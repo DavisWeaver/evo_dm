@@ -1,9 +1,16 @@
 import pytest
-from evodm import dp_env, policy_improvement, value_iteration, backwards_induction
+from evodm.dpsolve import dp_env, backwards_induction
+from evodm import define_mira_landscapes
+from itertools import chain
 
 @pytest.fixture
 def env():
     return dp_env(N=4, sigma = 0.5)
+
+@pytest.fixture
+def mira_env():
+    drugs = define_mira_landscapes()
+    return dp_env(N=4, num_drugs = 15, drugs = drugs, sigma = 0.5)
 
 #make sure probs for every P[s][a] sum to 1
 def test_P_probs(env):
@@ -22,5 +29,28 @@ def test_P_probs(env):
 
 def test_backwards_induction(env):
     policy, V = backwards_induction(env)
-    policy.shape
     assert policy.shape == (16,20)
+
+#test that changing gamma actually does something
+def test_discount_rate(env):
+    policy, V = backwards_induction(env, discount_rate=0.01)
+    policy2,V2 = backwards_induction(env, discount_rate = 0.999)
+    bools_list = []
+    for s in range(len(policy2)):
+        #this checks for equivalence of policy for 
+        bools = [policy[s][j] != policy2[s][j] for j in range(len(policy2[s]))]
+        bools_list.append(bools)
+    bools_list = list(chain.from_iterable(bools_list))
+    assert any(bools_list)
+
+#Now for the mira condition which seems to be giving me trouble
+def test_discount_mira(mira_env):
+    policy, V = backwards_induction(mira_env, discount_rate=0.01)
+    policy2,V2 = backwards_induction(mira_env, discount_rate = 0.999)
+    bools_list = []
+    for s in range(len(policy2)):
+        #this checks for equivalence of policy for 
+        bools = [policy[s][j] != policy2[s][j] for j in range(len(policy2[s]))]
+        bools_list.append(bools)
+    bools_list = list(chain.from_iterable(bools_list))
+    assert any(bools_list)

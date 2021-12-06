@@ -184,8 +184,6 @@ def ds_replay(hp):
         ds_replay.env.reset()
     return ds_replay
 
-
-
 @pytest.fixture
 def minibatch(ds_replay):
     minibatch = random.sample(ds_replay.replay_memory, ds_replay.hp.MINIBATCH_SIZE)
@@ -398,6 +396,7 @@ def ds_mira():
     hp.N = 4
     drugs = define_mira_landscapes()
     hp.NUM_DRUGS = 15
+    hp.RESET_EVERY = 20
     ds_mira = DrugSelector(hp = hp, drugs = drugs)
     return ds_mira
 
@@ -409,4 +408,28 @@ def test_mdp_mira_sweep():
     mem_list = mdp_mira_sweep(num_evals = 10)[0]
     assert len(mem_list) == 10
 
+#test the policies are actually different based on gamma
+def test_mdp_mira_sweep():
+    policies = mdp_mira_sweep(num_evals = 2, num_steps= 20, episodes = 1)[1]
+    policy = policies[0][0]
+    policy2 = policies[1][0]
+    bools_list = []
+    for s in range(len(policy2)):
+        #this checks for equivalence of policy for 
+        bools = [policy[s][j] != policy2[s][j] for j in range(len(policy2[s]))]
+        bools_list.append(bools)
+    bools_list = list(chain.from_iterable(bools_list))
+    assert any(bools_list)
 
+#narrow down on the issue
+def test_compute_optimal_policy(ds_mira):
+    policy = compute_optimal_policy(ds_mira, discount_rate= 0.001)
+    policy2 = compute_optimal_policy(ds_mira, discount_rate = 0.999)
+    bools_list = []
+    for s in range(len(policy2)):
+        #this checks for equivalence of policy for 
+        bools = [policy[s][j] != policy2[s][j] for j in range(len(policy2[s]))]
+        bools_list.append(bools)
+    bools_list = list(chain.from_iterable(bools_list))
+    
+    assert any(bools_list)

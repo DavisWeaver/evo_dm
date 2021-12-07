@@ -1,9 +1,11 @@
 from evodm import DrugSelector, practice, hyperparameters
 from evodm.learner import compute_optimal_policy, compute_optimal_action, define_mira_landscapes, mdp_mira_sweep
+from evodm.dpsolve import backwards_induction, dp_env
 import random
 import numpy as np
 import pytest
 from itertools import chain
+from copy import deepcopy
 #define fixtures to use for testing functions - lots of these will depend on each other
 @pytest.fixture
 def hp():
@@ -397,6 +399,7 @@ def ds_mira():
     drugs = define_mira_landscapes()
     hp.NUM_DRUGS = 15
     hp.RESET_EVERY = 20
+    hp.NORMALIZE_DRUGS = False
     ds_mira = DrugSelector(hp = hp, drugs = drugs)
     return ds_mira
 
@@ -433,3 +436,8 @@ def test_compute_optimal_policy(ds_mira):
     bools_list = list(chain.from_iterable(bools_list))
     
     assert any(bools_list)
+
+@pytest.fixture
+def mira_env():
+    drugs = define_mira_landscapes()
+    return dp_env(N=4, num_drugs = 15, drugs = drugs, sigma = 0.5)

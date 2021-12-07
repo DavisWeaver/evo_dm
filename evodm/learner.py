@@ -16,7 +16,7 @@ from tqdm import tqdm
 from copy import deepcopy
 
 # Function to set hyperparameters for the learner - just edit this any time you
-# want to screw around with them .
+# want to screw around with them.
 #or edit directly
 
 
@@ -50,6 +50,7 @@ class hyperparameters:
         self.NOISE = False #should the sensor readings be noisy?
         self.NOISE_MODIFIER = 1  #enable us to increase or decrease the amount of noise in the system
         self.NUM_DRUGS = 4
+        self.MIRA = True
 
         #define victory conditions for player and pop
         self.PLAYER_WCUTOFF = 0.001
@@ -473,6 +474,7 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20):
     hp.RESET_EVERY = num_steps
     hp.N = 4
     hp.NUM_DRUGS = 15
+    hp.NORMALIZE_DRUGS = False
 
     drugs = define_mira_landscapes()
     agent = DrugSelector(hp = hp, drugs = drugs)
@@ -576,12 +578,14 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     hp.AVERAGE_OUTCOMES = average_outcomes
     hp.DISCOUNT = gamma
     hp.LEARNING_RATE = learning_rate
+    hp.MIRA = mira
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes
     hp.EPSILON_DECAY = pow(hp.MIN_EPSILON, 1/hp.EPISODES)
 
     if mira:
+        hp.NORMALIZE_DRUGS = False
         drugs = define_mira_landscapes()
     #initialize agent, including the updated hyperparameters
     agent = DrugSelector(hp = hp, drugs = drugs)

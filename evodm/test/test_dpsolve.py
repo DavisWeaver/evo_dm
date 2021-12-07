@@ -45,8 +45,8 @@ def test_discount_rate(env):
 
 #Now for the mira condition which seems to be giving me trouble
 def test_discount_mira(mira_env):
-    policy, V = backwards_induction(mira_env, discount_rate=0.01)
-    policy2,V2 = backwards_induction(mira_env, discount_rate = 0.999)
+    policy, V = backwards_induction(mira_env, discount_rate=0.001)
+    policy2,V2 = backwards_induction(mira_env, discount_rate = 0.99)
     bools_list = []
     for s in range(len(policy2)):
         #this checks for equivalence of policy for 

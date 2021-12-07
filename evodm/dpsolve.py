@@ -148,11 +148,8 @@ def backwards_induction(env, num_steps = 20, discount_rate = 0.99):
                                    discount = discount_rate, N = num_steps)
 
     fh.run()
-    policy = fh.policy
-    V = fh.V
-    del fh
 
-    return policy, V
+    return fh.policy, fh.V
 
 
 def value_iteration(env, theta=0.0001, discount_factor=0.99):

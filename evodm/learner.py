@@ -462,7 +462,7 @@ def define_mira_landscapes():
     drugs.append([2.59, 2.572, 2.393, 2.832, 2.44, 2.808, 2.652, 0.611, 2.067, 2.446, 2.957, 2.633, 2.735, 2.863, 2.796, 3.203])     #FEP
     return drugs
 
-def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20):
+def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = False):
     '''
     Function to evaluate performance of the MDP optimal for different discount_rates (gamma)
     Args:
@@ -474,7 +474,7 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20):
     hp.RESET_EVERY = num_steps
     hp.N = 4
     hp.NUM_DRUGS = 15
-    hp.NORMALIZE_DRUGS = False
+    hp.NORMALIZE_DRUGS = normalize_drugs
 
     drugs = define_mira_landscapes()
     agent = DrugSelector(hp = hp, drugs = drugs)

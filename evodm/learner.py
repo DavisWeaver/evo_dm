@@ -500,7 +500,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   player_wcutoff = 0.1, pop_wcutoff = 0.99, win_threshold = 200,
                   win_reward = 0, standard_practice = False, drugs = "none",
                   average_outcomes = False, mira = False, gamma = 0.99,
-                  learning_rate = 0.001):
+                  learning_rate = 0.001, minibatch_size = 100, 
+                  update_target_every = 500):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
     to try and minimize the fitness of a population evolving on a landscape.
@@ -579,6 +580,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     hp.DISCOUNT = gamma
     hp.LEARNING_RATE = learning_rate
     hp.MIRA = mira
+    hp.MINIBATCH_SIZE = int(minibatch_size)
+    hp.UPDATE_TARGET_EVERY = int(update_target_every)
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes

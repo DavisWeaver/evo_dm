@@ -30,27 +30,3 @@ def test_P_probs(env):
 def test_backwards_induction(env):
     policy, V = backwards_induction(env)
     assert policy.shape == (16,20)
-
-#test that changing gamma actually does something
-def test_discount_rate(env):
-    policy, V = backwards_induction(env, discount_rate=0.01)
-    policy2,V2 = backwards_induction(env, discount_rate = 0.999)
-    bools_list = []
-    for s in range(len(policy2)):
-        #this checks for equivalence of policy for 
-        bools = [policy[s][j] != policy2[s][j] for j in range(len(policy2[s]))]
-        bools_list.append(bools)
-    bools_list = list(chain.from_iterable(bools_list))
-    assert any(bools_list)
-
-#Now for the mira condition which seems to be giving me trouble
-def test_discount_mira(mira_env):
-    policy, V = backwards_induction(mira_env, discount_rate=0.001)
-    policy2,V2 = backwards_induction(mira_env, discount_rate = 0.99)
-    bools_list = []
-    for s in range(len(policy2)):
-        #this checks for equivalence of policy for 
-        bools = [policy[s][j] != policy2[s][j] for j in range(len(policy2[s]))]
-        bools_list.append(bools)
-    bools_list = list(chain.from_iterable(bools_list))
-    assert any(bools_list)

@@ -16,6 +16,5 @@ setup(
       "matplotlib~=3.3.4", 
       "pytest", 
       "pymdptoolbox"
-    ],
-    python_requires='>= 3.6.0, <=3.9.11'
+    ]
 )

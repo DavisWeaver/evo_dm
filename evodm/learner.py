@@ -27,7 +27,7 @@ class hyperparameters:
         self.REPLAY_MEMORY_SIZE = 10000
         self.MIN_REPLAY_MEMORY_SIZE = 1000
         self.MINIBATCH_SIZE = 100  # still working out what this means
-        self.UPDATE_TARGET_EVERY = 500 #every 500 steps, update the target
+        self.UPDATE_TARGET_EVERY = 310 #every 500 steps, update the target
         self.TRAIN_INPUT = "state_vector"
         
         # Exploration settings
@@ -501,7 +501,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   win_reward = 0, standard_practice = False, drugs = "none",
                   average_outcomes = False, mira = False, gamma = 0.99,
                   learning_rate = 0.001, minibatch_size = 100, 
-                  update_target_every = 500):
+                  update_target_every = 310):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
     to try and minimize the fitness of a population evolving on a landscape.

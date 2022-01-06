@@ -435,6 +435,8 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
         policy = dp_policy
     elif naive:
         policy = []
+    elif pre_trained:
+        policy = []
     else:
         policy = agent.compute_implied_policy(update = False)
     return reward_list, agent, policy

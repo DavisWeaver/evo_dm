@@ -338,7 +338,7 @@ def compute_optimal_action(agent, policy, step):
     return action
     
 #'main' function that iterates through simulations to train the agent
-def practice(agent, naive = False, standard_practice = False, dp_solution = False, discount_rate = 0.99, preset_policy = "None"):
+def practice(agent, naive = False, standard_practice = False, dp_solution = False, discount_rate = 0.99, pre_trained = False):
     if dp_solution:
         dp_policy = compute_optimal_policy(agent, discount_rate = discount_rate,
                                           num_steps = agent.hp.RESET_EVERY)
@@ -353,6 +353,8 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
 
         # Restarting episode - reset episode reward and step number
         episode_reward = 0
+        if pre_trained:
+            agent.hp.epsilon = 0
 
         for i in range(agent.hp.RESET_EVERY):
 
@@ -395,7 +397,7 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
 
                 # Every step we update replay memory and train main network - only train if we are doing a not naive run
                 agent.update_replay_memory()
-                if not any([dp_solution, naive]):
+                if not any([dp_solution, naive, pre_trained]):
                     agent.train()
             
             if agent.env.done: # break if either of the victory conditions are met
@@ -501,6 +503,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   win_reward = 0, standard_practice = False, drugs = "none",
                   average_outcomes = False, mira = False, gamma = 0.99,
                   learning_rate = 0.002, minibatch_size = 400, 
+                  pre_trained = False, 
+                  agent = "none",
                   update_target_every = 310):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
@@ -587,6 +591,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     #0.005 = epsilon_decay^episodes
     hp.EPSILON_DECAY = pow(hp.MIN_EPSILON, 1/hp.EPISODES)
 
+    if pre_trained and agent != "none":
+        rewards, agent, policy = practice(agent, naive=False)
     if mira:
         hp.NORMALIZE_DRUGS = False
         drugs = define_mira_landscapes()

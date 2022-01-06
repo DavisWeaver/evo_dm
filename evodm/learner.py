@@ -413,7 +413,7 @@ def practice(agent, naive = False, standard_practice = False, dp_solution = Fals
             reward_list.append([episode, average_reward, min_reward, max_reward])
 
             #update the implied policy vector
-            if not any([dp_solution, naive]):
+            if not any([dp_solution, naive, pre_trained]):
                 if not agent.hp.NUM_EVOLS > 1:
                     agent.compute_implied_policy(update = True)
 
@@ -495,7 +495,7 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
 
 
 def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
-                  reset_every = 200, min_epsilon = 0.005, 
+                  reset_every = 20, min_epsilon = 0.005, 
                   train_input = "fitness",  random_start = False, 
                   noise = False, noise_modifier = 1, num_drugs = 4, 
                   sigma = 0.5, normalize_drugs = True, 
@@ -593,6 +593,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
 
     if pre_trained and agent != "none":
         rewards, agent, policy = practice(agent, naive=False, pre_trained = pre_trained)
+        return [rewards, agent, policy]
+        
     if mira:
         hp.NORMALIZE_DRUGS = False
         drugs = define_mira_landscapes()

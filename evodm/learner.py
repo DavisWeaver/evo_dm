@@ -594,6 +594,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     hp.EPSILON_DECAY = pow(hp.MIN_EPSILON, 1/hp.EPISODES)
 
     if pre_trained and agent != "none":
+        agent.master_memory = []
         rewards, agent, policy = practice(agent, naive=False, pre_trained = pre_trained)
         return [rewards, agent, policy]
         

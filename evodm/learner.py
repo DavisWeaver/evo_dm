@@ -2,6 +2,7 @@
 # we are taking inspiration (and in some cases borrowing heavily) from the following
 # tutorial: https://pythonprogramming.net/training-deep-q-learning-dqn-reinforcement-learning-python-tutorial/?completed=/deep-q-learning-dqn-reinforcement-learning-python-tutorial/
 
+from typing import Sequence
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
 from numpy.lib.utils import deprecate
@@ -14,6 +15,7 @@ import random
 import numpy as np 
 from tqdm import tqdm
 from copy import deepcopy
+from itertools import combinations
 
 # Function to set hyperparameters for the learner - just edit this any time you
 # want to screw around with them.
@@ -21,12 +23,21 @@ from copy import deepcopy
 
 
 class hyperparameters:
+    '''
+    class to store the hyperparemeters that control evoDM
+    ...
+    Args
+    ------
+    self: class hyperparameters
+    
+    Returns class hyperparameters
+    '''
 
     def __init__(self):
         # Model training settings
         self.REPLAY_MEMORY_SIZE = 10000
         self.MIN_REPLAY_MEMORY_SIZE = 1000
-        self.MINIBATCH_SIZE = 100  # still working out what this means
+        self.MINIBATCH_SIZE = 100  
         self.UPDATE_TARGET_EVERY = 310 #every 500 steps, update the target
         self.TRAIN_INPUT = "state_vector"
         
@@ -66,8 +77,24 @@ class hyperparameters:
 
 # This is the class for the learning agent
 class DrugSelector:
-
+    
     def __init__(self, hp, drugs = "none"):
+        '''
+        Initialize the DrugSelector class
+        ...
+        Args
+        ------
+        self: class DrugSelector
+        hp: class hyperparameters
+            hyperparameters that control the evodm architecture and the 
+            evolutionary simulations used to train it
+        drugs: list of numeric matrices
+            optional parameter - can pass in a list of drugs to use as the available actions. 
+            If not provided, drugs will be procedurally generated
+
+
+        Returns class DrugSelector
+        '''
         # hp stands for hyperparameters
         self.hp = hp
         # initialize the environment
@@ -338,10 +365,42 @@ def compute_optimal_action(agent, policy, step):
     return action
     
 #'main' function that iterates through simulations to train the agent
-def practice(agent, naive = False, standard_practice = False, dp_solution = False, discount_rate = 0.99, pre_trained = False):
+def practice(agent, naive = False, standard_practice = False, 
+             dp_solution = False, pre_trained = False, discount_rate = 0.99,
+             policy = "none"):
+    '''
+    Function that iterates through simulations to train the agent. Also used to test general drug cycling policies as controls for evodm 
+    ...
+    Args
+    ------
+    agent: class DrugSelector
+    naive: bool
+        should a naive drug cycling policy be used
+    standard_practice: bool
+        should a drug cycling policy approximating standard clinical practice be tested
+    dp_solution: bool
+        should a gold-standard optimal policy computed using backwards induction of an MDP be tested
+    pre_trained: bool
+        is the provided agent pre-trained? (i.e. should we be updating weights and biases each time step)
+    discount_rate: float
+    policy: numeric matrix 
+        encoding optimal actions a for all states s in S, defaults to "none" - 
+        in which case logic defined by bools will dictate which policy is used. 
+        If a policy is provided, it will supercede all other options and be tested
+
+    Returns rewards, agent, policy 
+        reward vector, trained agent including master memory dictating what happened, and learned policy (if applicable)
+    '''
     if dp_solution:
         dp_policy = compute_optimal_policy(agent, discount_rate = discount_rate,
                                           num_steps = agent.hp.RESET_EVERY)
+
+    #this is a bit of a hack - we are coopting the code that tests the dp solution to
+    #  test user-provided policies that use the same format
+    #These policies will almost never have anything to do with the dp solutions
+    if policy != "none": 
+        dp_policy = policy
+        dp_solution = True
 
     #every given number of episodes we are going to track the stats
     #format is [average_reward, min_reward, max_reward]
@@ -470,8 +529,10 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
     '''
     Function to evaluate performance of the MDP optimal for different discount_rates (gamma)
     Args:
-        num_evals: how many gamma parameters to test
-        episodes: how many episodes should be evaluated per gamma parameter
+        num_evals: int
+            how many gamma parameters to test
+        episodes: int
+            how many episodes should be evaluated per gamma parameter
     '''
     hp = hyperparameters()
     hp.EPISODES = episodes
@@ -494,6 +555,58 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
         policy_list.append([policy_i, i])
 
     return [mem_list, policy_list]
+
+#sweep through all two-drug policy combinations of the mira landscapes
+def policy_sweep(episodes, normalize_drugs = False, num_steps = 20):
+    '''
+    Function to sweep through all two-drug policy combinations and test performance in simulated system
+    Args:
+        episodes: int
+            how many episodes should be evaluated per policy
+        normalize_drugs: bool
+    '''
+    hp = hyperparameters()
+    hp.EPISODES = episodes
+    hp.RESET_EVERY = num_steps
+    hp.N = 4
+    hp.NUM_DRUGS = 15
+    hp.NORMALIZE_DRUGS = normalize_drugs
+
+    drugs = define_mira_landscapes()
+    agent = DrugSelector(hp = hp, drugs = drugs)
+
+    #git iterable for all drugs
+    all_drugs = [i for i in range(len(drugs))]
+
+    #grab all possible combinations of two drugs
+    all_comb = [i for i in combinations(all_drugs, 2)]
+
+    mem_list = []
+    for i in iter(all_comb):
+        policy_i = convert_two_drug(drug_comb = i, num_steps = num_steps, num_drugs = 15)
+        rewards_i, agent_i, policy_i = practice(deepcopy(agent), dp_solution = True, policy=policy_i)
+        mem_i = agent_i.master_memory
+        mem_list.append(mem_i)
+    
+    return [mem_i, all_comb]
+
+def convert_two_drug(drug_comb, num_steps = 20, num_drugs = 15, N = 4):
+    '''
+    Function to convert two-drug combo to an alternating policy of the same form as compute_optimal
+    Args:
+        drug_comb: tuple
+    '''
+    #grab what the row should look like
+    row = list((drug_comb*100))[:num_steps]
+    policy = []
+    #repeat for every state since these are going to be state independent
+    for i in range(N**2):
+        policy.append(row)
+
+    return policy
+    
+    
+
 
 
 def evol_deepmind(num_evols = 1, N = 5, episodes = 50,

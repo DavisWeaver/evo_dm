@@ -586,9 +586,9 @@ def policy_sweep(episodes, normalize_drugs = False, num_steps = 20):
         policy_i = convert_two_drug(drug_comb = i, num_steps = num_steps, num_drugs = 15)
         rewards_i, agent_i, policy = practice(deepcopy(agent), dp_solution = True, policy=policy_i)
         mem_i = agent_i.master_memory
-        mem_list.append(mem_i)
+        mem_list.append([mem_i, i])
     
-    return [mem_i, all_comb]
+    return mem_list
 
 def convert_two_drug(drug_comb, num_steps = 20, num_drugs = 15, N = 4):
     '''
@@ -606,9 +606,6 @@ def convert_two_drug(drug_comb, num_steps = 20, num_drugs = 15, N = 4):
     return policy
     
     
-
-
-
 def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   reset_every = 20, min_epsilon = 0.005, 
                   train_input = "fitness",  random_start = False, 

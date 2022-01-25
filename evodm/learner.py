@@ -1,8 +1,6 @@
 # this file will define the learner class, along with required methods -
 # we are taking inspiration (and in some cases borrowing heavily) from the following
 # tutorial: https://pythonprogramming.net/training-deep-q-learning-dqn-reinforcement-learning-python-tutorial/?completed=/deep-q-learning-dqn-reinforcement-learning-python-tutorial/
-
-from typing import Sequence
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
 from numpy.lib.utils import deprecate
@@ -58,6 +56,7 @@ class hyperparameters:
         self.EPISODES = 50
         self.N = 5
         self.RANDOM_START = False
+        self.STARTING_GENOTYPE = 0 #default to starting at the wild type genotype
         self.NOISE = False #should the sensor readings be noisy?
         self.NOISE_MODIFIER = 1  #enable us to increase or decrease the amount of noise in the system
         self.NUM_DRUGS = 4
@@ -111,7 +110,8 @@ class DrugSelector:
                             drugs = drugs, 
                             add_noise = self.hp.NOISE, 
                             noise_modifier= self.hp.NOISE_MODIFIER,
-                            average_outcomes=self.hp.AVERAGE_OUTCOMES)
+                            average_outcomes=self.hp.AVERAGE_OUTCOMES, 
+                            starting_genotype = self.hp.STARTING_GENOTYPE)
 
         # main model  # gets trained every step
         self.model = self.create_model()
@@ -573,8 +573,7 @@ def policy_sweep(episodes, normalize_drugs = False, num_steps = 20):
     hp.NORMALIZE_DRUGS = normalize_drugs
 
     drugs = define_mira_landscapes()
-    agent = DrugSelector(hp = hp, drugs = drugs)
-
+    
     #git iterable for all drugs
     all_drugs = [i for i in range(len(drugs))]
 
@@ -582,12 +581,15 @@ def policy_sweep(episodes, normalize_drugs = False, num_steps = 20):
     all_comb = [i for i in combinations(all_drugs, 2)]
 
     mem_list = []
-    for i in iter(all_comb):
-        policy_i = convert_two_drug(drug_comb = i, num_steps = num_steps, num_drugs = 15)
-        rewards_i, agent_i, policy = practice(deepcopy(agent), dp_solution = True, policy=policy_i)
-        mem_i = agent_i.master_memory
-        mem_list.append([mem_i, i])
-    
+    for j in range(hp.N**2):
+        hp.STARTING_GENOTYPE = j
+        agent = DrugSelector(hp = hp, drugs = drugs)
+        for i in iter(all_comb):
+            policy_i = convert_two_drug(drug_comb = i, num_steps = num_steps, num_drugs = 15)
+            rewards_i, agent_i, policy = practice(deepcopy(agent), dp_solution = True, policy=policy_i)
+            mem_i = agent_i.master_memory
+            mem_list.append([mem_i, i, j])
+        
     return mem_list
 
 def convert_two_drug(drug_comb, num_steps = 20, num_drugs = 15, N = 4):
@@ -606,9 +608,6 @@ def convert_two_drug(drug_comb, num_steps = 20, num_drugs = 15, N = 4):
     return policy
     
     
-
-
-
 def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   reset_every = 20, min_epsilon = 0.005, 
                   train_input = "fitness",  random_start = False, 

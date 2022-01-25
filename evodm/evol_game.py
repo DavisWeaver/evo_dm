@@ -29,7 +29,8 @@ class evol_env:
                         drugs = "none", 
                         noise_modifier = 1, 
                         add_noise = True, 
-                        average_outcomes = False):
+                        average_outcomes = False, 
+                        starting_genotype = 0):
         #define switch for whether to record the state vector or fitness for the learner
         self.TRAIN_INPUT = train_input
         #define environmental variables
@@ -73,6 +74,7 @@ class evol_env:
         #define victory threshold
         self.WIN_THRESHOLD = win_threshold # number of player actions before the game is called
         self.WIN_REWARD = win_reward
+        self.starting_genotype = starting_genotype
 
         self.done = False
 
@@ -100,7 +102,7 @@ class evol_env:
             self.state_vector = np.ones((2**N,1))/2**N
         else:
             self.state_vector  = np.zeros((2**N,1))
-            self.state_vector[0][0] = 1
+            self.state_vector[starting_genotype][0] = 1
 
         ##Define initial fitness
         self.fitness = [np.dot(self.drugs[self.action-1], self.state_vector)]
@@ -270,7 +272,7 @@ class evol_env:
             self.state_vector = np.ones((2**self.N,1))/2**self.N
         else:
             self.state_vector  = np.zeros((2**self.N,1))
-            self.state_vector[0][0] = 1
+            self.state_vector[self.starting_genotype][0] = 1
 
         #reset fitness vector and action number
         self.fitness = []

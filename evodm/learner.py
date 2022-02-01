@@ -191,9 +191,9 @@ class DrugSelector:
                        verbose=0, shuffle=False, callbacks=None)
 
         # If counter reaches set value, update target network with weights of main network
-        if self.env.action_number > self.hp.UPDATE_TARGET_EVERY:
+        if self.env.update_target_counter > self.hp.UPDATE_TARGET_EVERY:
             self.target_model.set_weights(self.model.get_weights())
-            self.env.action_number = 0
+            self.env.update_target_counter = 0
 
     #function to enumerate batch and generate X/y for training
     def enumerate_batch(self, minibatch, future_qs_list, current_qs_list):

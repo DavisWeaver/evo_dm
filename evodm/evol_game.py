@@ -46,6 +46,7 @@ class evol_env:
         self.ACTIONS = [i for i in range(1, num_drugs + 1)] # action space - added the plus one because I decided to use 1 indexing for the actions for no good reason a while ago
         self.action = 1 #first action - value will be updated by the learner
         self.prev_action = 1.0 #pretend this is the second time seeing it why not
+        self.update_target_counter = 0
 
         #should noise be introduced into the fitness readings?
         self.NOISE_MODIFIER = noise_modifier
@@ -127,6 +128,7 @@ class evol_env:
         #update how many actions have been taken
         self.time_step += self.NUM_EVOLS
         self.action_number += 1
+        self.update_target_counter +=1
 
         # Run the sim under the assigned conditions
         if self.action not in self.ACTIONS:

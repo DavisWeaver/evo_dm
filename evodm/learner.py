@@ -556,6 +556,24 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
 
     return [mem_list, policy_list]
 
+def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs= False):
+    
+    hp = hyperparameters()
+    hp.EPISODES = episodes
+    hp.RESET_EVERY = num_steps
+    hp.N = 4
+    hp.NUM_DRUGS = 15
+    hp.NORMALIZE_DRUGS = normalize_drugs
+    
+    drugs = define_mira_landscapes()
+    agent = DrugSelector(hp = hp, drugs = drugs)
+
+    rewards,agent, policy = practice(deepcopy(agent, dp_solution=True, policy = policy))
+
+    mem = agent.master_memory
+    return mem
+
+
 #sweep through all two-drug policy combinations of the mira landscapes
 def policy_sweep(episodes, normalize_drugs = False, num_steps = 20):
     '''

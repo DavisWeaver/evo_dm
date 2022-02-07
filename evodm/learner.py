@@ -557,7 +557,18 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
     return [mem_list, policy_list]
 
 def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs= False):
+    '''
+    Function to test a generic policy for performance in simulated e.coli system
+    Args:
+        policy: list of lists
+            policy matrix specifying deterministic action selection for each state-evolstep. 
+        episodes: int
+        num_steps: int
+        normalize_drugs= bool
     
+    returns list of lists
+        agent memory specifying performance.
+    '''
     hp = hyperparameters()
     hp.EPISODES = episodes
     hp.RESET_EVERY = num_steps

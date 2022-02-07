@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='evodm', 
-    version='0.1.0', 
+    version='1.0.0', 
     author = 'Davis Weaver', 
     author_email = 'dtw43@case.edu',
     packages=['evodm', "evodm.test"], 

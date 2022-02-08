@@ -29,7 +29,8 @@ class evol_env:
                         drugs = "none", 
                         noise_modifier = 1, 
                         add_noise = True, 
-                        average_outcomes = False):
+                        average_outcomes = False, 
+                        starting_genotype = 0):
         #define switch for whether to record the state vector or fitness for the learner
         self.TRAIN_INPUT = train_input
         #define environmental variables
@@ -45,6 +46,7 @@ class evol_env:
         self.ACTIONS = [i for i in range(1, num_drugs + 1)] # action space - added the plus one because I decided to use 1 indexing for the actions for no good reason a while ago
         self.action = 1 #first action - value will be updated by the learner
         self.prev_action = 1.0 #pretend this is the second time seeing it why not
+        self.update_target_counter = 0
 
         #should noise be introduced into the fitness readings?
         self.NOISE_MODIFIER = noise_modifier
@@ -73,6 +75,7 @@ class evol_env:
         #define victory threshold
         self.WIN_THRESHOLD = win_threshold # number of player actions before the game is called
         self.WIN_REWARD = win_reward
+        self.starting_genotype = starting_genotype
 
         self.done = False
 
@@ -100,7 +103,7 @@ class evol_env:
             self.state_vector = np.ones((2**N,1))/2**N
         else:
             self.state_vector  = np.zeros((2**N,1))
-            self.state_vector[0][0] = 1
+            self.state_vector[starting_genotype][0] = 1
 
         ##Define initial fitness
         self.fitness = [np.dot(self.drugs[self.action-1], self.state_vector)]
@@ -125,6 +128,7 @@ class evol_env:
         #update how many actions have been taken
         self.time_step += self.NUM_EVOLS
         self.action_number += 1
+        self.update_target_counter +=1
 
         # Run the sim under the assigned conditions
         if self.action not in self.ACTIONS:
@@ -270,7 +274,7 @@ class evol_env:
             self.state_vector = np.ones((2**self.N,1))/2**self.N
         else:
             self.state_vector  = np.zeros((2**self.N,1))
-            self.state_vector[0][0] = 1
+            self.state_vector[self.starting_genotype][0] = 1
 
         #reset fitness vector and action number
         self.fitness = []

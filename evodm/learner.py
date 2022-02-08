@@ -11,6 +11,7 @@ from evodm.evol_game import evol_env
 from evodm.dpsolve import backwards_induction, dp_env
 import random
 import numpy as np 
+import pandas as pd
 from tqdm import tqdm
 from copy import deepcopy
 from itertools import combinations
@@ -579,11 +580,46 @@ def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs=
     drugs = define_mira_landscapes()
     agent = DrugSelector(hp = hp, drugs = drugs)
 
-    rewards,agent, policy = practice(deepcopy(agent, dp_solution=True, policy = policy))
+    rewards,agent, policy = practice(deepcopy(agent), dp_solution=True, policy = policy)
 
     mem = agent.master_memory
     return mem
 
+def sweep_replicate_policy(policies):
+    '''
+    Function to sweep the policy learned by a given replicate at every episode
+    Args:
+        episodes: int
+            how many episodes should be evaluated per policy
+        normalize_drugs: bool
+    '''
+    def clean_policy(policy, reset):
+        policy = policy[['state', 'action', 'prob_selection']]
+        states = pd.unique(policy['state'])
+        
+        #loop through states to construct the list
+        outer_list = []
+        for i in iter(states):
+        #this does argmax
+            policy_i = policy[policy['state'] == i] 
+            policy_i = policy_i[policy_i['prob_selection'] == np.max(policy_i['prob_selection'])]
+            inner_list = [int(policy_i['action']) -1 for i in range(reset)]
+            outer_list.append(inner_list)
+        
+        return outer_list 
+        
+    
+    ep_numbers = pd.unique(policies['episode'])
+    reset = pd.unique(policies['reset'])[0]
+    
+    mem_list = []
+    for i in iter(ep_numbers): 
+        policy = policies[policies['episode'] == i]
+        policy = clean_policy(policy, reset = reset)
+        mem_i = test_generic_policy(policy, num_steps = reset)
+        mem_list.append(mem_i)
+    
+    return mem_list
 
 #sweep through all two-drug policy combinations of the mira landscapes
 def policy_sweep(episodes, normalize_drugs = False, num_steps = 20):

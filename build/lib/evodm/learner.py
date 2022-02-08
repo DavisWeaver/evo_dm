@@ -1,8 +1,6 @@
 # this file will define the learner class, along with required methods -
 # we are taking inspiration (and in some cases borrowing heavily) from the following
 # tutorial: https://pythonprogramming.net/training-deep-q-learning-dqn-reinforcement-learning-python-tutorial/?completed=/deep-q-learning-dqn-reinforcement-learning-python-tutorial/
-
-from typing import Sequence
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
 from numpy.lib.utils import deprecate
@@ -58,6 +56,7 @@ class hyperparameters:
         self.EPISODES = 50
         self.N = 5
         self.RANDOM_START = False
+        self.STARTING_GENOTYPE = 0 #default to starting at the wild type genotype
         self.NOISE = False #should the sensor readings be noisy?
         self.NOISE_MODIFIER = 1  #enable us to increase or decrease the amount of noise in the system
         self.NUM_DRUGS = 4
@@ -111,7 +110,8 @@ class DrugSelector:
                             drugs = drugs, 
                             add_noise = self.hp.NOISE, 
                             noise_modifier= self.hp.NOISE_MODIFIER,
-                            average_outcomes=self.hp.AVERAGE_OUTCOMES)
+                            average_outcomes=self.hp.AVERAGE_OUTCOMES, 
+                            starting_genotype = self.hp.STARTING_GENOTYPE)
 
         # main model  # gets trained every step
         self.model = self.create_model()
@@ -191,9 +191,9 @@ class DrugSelector:
                        verbose=0, shuffle=False, callbacks=None)
 
         # If counter reaches set value, update target network with weights of main network
-        if self.env.action_number > self.hp.UPDATE_TARGET_EVERY:
+        if self.env.update_target_counter > self.hp.UPDATE_TARGET_EVERY:
             self.target_model.set_weights(self.model.get_weights())
-            self.env.action_number = 0
+            self.env.update_target_counter = 0
 
     #function to enumerate batch and generate X/y for training
     def enumerate_batch(self, minibatch, future_qs_list, current_qs_list):
@@ -556,6 +556,35 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
 
     return [mem_list, policy_list]
 
+def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs= False):
+    '''
+    Function to test a generic policy for performance in simulated e.coli system
+    Args:
+        policy: list of lists
+            policy matrix specifying deterministic action selection for each state-evolstep. 
+        episodes: int
+        num_steps: int
+        normalize_drugs= bool
+    
+    returns list of lists
+        agent memory specifying performance.
+    '''
+    hp = hyperparameters()
+    hp.EPISODES = episodes
+    hp.RESET_EVERY = num_steps
+    hp.N = 4
+    hp.NUM_DRUGS = 15
+    hp.NORMALIZE_DRUGS = normalize_drugs
+    
+    drugs = define_mira_landscapes()
+    agent = DrugSelector(hp = hp, drugs = drugs)
+
+    rewards,agent, policy = practice(deepcopy(agent, dp_solution=True, policy = policy))
+
+    mem = agent.master_memory
+    return mem
+
+
 #sweep through all two-drug policy combinations of the mira landscapes
 def policy_sweep(episodes, normalize_drugs = False, num_steps = 20):
     '''
@@ -573,8 +602,7 @@ def policy_sweep(episodes, normalize_drugs = False, num_steps = 20):
     hp.NORMALIZE_DRUGS = normalize_drugs
 
     drugs = define_mira_landscapes()
-    agent = DrugSelector(hp = hp, drugs = drugs)
-
+    
     #git iterable for all drugs
     all_drugs = [i for i in range(len(drugs))]
 
@@ -582,12 +610,15 @@ def policy_sweep(episodes, normalize_drugs = False, num_steps = 20):
     all_comb = [i for i in combinations(all_drugs, 2)]
 
     mem_list = []
-    for i in iter(all_comb):
-        policy_i = convert_two_drug(drug_comb = i, num_steps = num_steps, num_drugs = 15)
-        rewards_i, agent_i, policy = practice(deepcopy(agent), dp_solution = True, policy=policy_i)
-        mem_i = agent_i.master_memory
-        mem_list.append([mem_i, i])
-    
+    for j in range(hp.N**2):
+        hp.STARTING_GENOTYPE = j
+        agent = DrugSelector(hp = hp, drugs = drugs)
+        for i in iter(all_comb):
+            policy_i = convert_two_drug(drug_comb = i, num_steps = num_steps, num_drugs = 15)
+            rewards_i, agent_i, policy = practice(deepcopy(agent), dp_solution = True, policy=policy_i)
+            mem_i = agent_i.master_memory
+            mem_list.append([mem_i, i, j])
+        
     return mem_list
 
 def convert_two_drug(drug_comb, num_steps = 20, num_drugs = 15, N = 4):

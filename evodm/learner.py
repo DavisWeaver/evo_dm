@@ -281,15 +281,11 @@ class DrugSelector:
             #put together action list
             a_list = to_categorical([i for i in range(len(self.env.ACTIONS))])
             a_list = np.ndarray.tolist(a_list)
-
             for s in range(len(self.env.state_vector)):
-
                 state_vector = np.zeros((2 ** self.env.N, 1))
                 state_vector[s] = 1
-                policy_a = np.zeros(len(self.env.ACTIONS))
-
+                a_out = []
                 for a in range(len(a_list)):
-
                     fit = np.dot(self.env.drugs[a], state_vector)[0] #compute fitness for given state_vector, drug combination
                     a_vec = deepcopy(a_list)[a]
                     #append fitness to one-hot encoded action to mimic how the data are fed into the model
@@ -300,12 +296,10 @@ class DrugSelector:
                     #find the optimal action
                     action_a = self.model.predict(tens)[0].argmax()
                     #make it categorical
-                    action_a = to_categorical(action_a, num_classes= len(a_list))
-                    #stack it onto the policy
-                    policy_a += action_a
-
-                policy_a = policy_a/len(a_list)
-                policy.append(policy_a)
+                    a_out.append(action_a)
+                    
+                policy.append(a_out)
+            #policy_a = policy_a/len(a_list)
         
         if update:
             self.policies.append([policy, self.env.episode_number])
@@ -603,6 +597,8 @@ def sweep_replicate_policy(policies):
         #this does argmax
             policy_i = policy[policy['state'] == i] 
             policy_i = policy_i[policy_i['prob_selection'] == np.max(policy_i['prob_selection'])]
+            if len(policy_i) >1: 
+                policy_i = policy_i.iloc[0]
             inner_list = [int(policy_i['action']) -1 for i in range(reset)]
             outer_list.append(inner_list)
         

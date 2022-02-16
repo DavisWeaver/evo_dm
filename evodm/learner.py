@@ -295,7 +295,7 @@ class DrugSelector:
                     tens = a_vec.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
                     #find the optimal action
                     action_a = self.model.predict(tens)[0].argmax()
-                    #make it categorical
+            
                     a_out.append(action_a)
                     
                 policy.append(a_out)
@@ -340,7 +340,7 @@ def compute_optimal_policy(agent, discount_rate = 0.99, num_steps = 20):
 
     return policy
 
-def compute_optimal_action(agent, policy, step):
+def compute_optimal_action(agent, policy, step, prev_action = False):
     '''
     Function to compute the optimal action based on a deterministic policy. 
     ...
@@ -355,14 +355,18 @@ def compute_optimal_action(agent, policy, step):
     '''
     
     index = [i for i,j in enumerate(agent.env.state_vector) if j == 1.][0]
-    action = policy[index][step] + 1 #plus one because I made the bad decision to force the actions to be 1,2,3,4 once upon a time
+
+    if prev_action:
+        action = policy[index][int(agent.env.prev_action)] +1
+    else:
+        action = policy[index][step] + 1 #plus one because I made the bad decision to force the actions to be 1,2,3,4 once upon a time
     
     return action
     
 #'main' function that iterates through simulations to train the agent
 def practice(agent, naive = False, standard_practice = False, 
              dp_solution = False, pre_trained = False, discount_rate = 0.99,
-             policy = "none"):
+             policy = "none", prev_action = False):
     '''
     Function that iterates through simulations to train the agent. Also used to test general drug cycling policies as controls for evodm 
     ...
@@ -377,6 +381,8 @@ def practice(agent, naive = False, standard_practice = False,
         should a gold-standard optimal policy computed using backwards induction of an MDP be tested
     pre_trained: bool
         is the provided agent pre-trained? (i.e. should we be updating weights and biases each time step)
+    prev_action: bool
+        are we evaluating implied policies or actual DP policies?
     discount_rate: float
     policy: numeric matrix 
         encoding optimal actions a for all states s in S, defaults to "none" - 
@@ -424,7 +430,7 @@ def practice(agent, naive = False, standard_practice = False,
                     else: 
                         agent.env.action = random.randint(np.min(agent.env.ACTIONS),np.max(agent.env.ACTIONS))
                 elif dp_solution:
-                    agent.env.action = compute_optimal_action(agent, dp_policy, step = i)
+                    agent.env.action = compute_optimal_action(agent, dp_policy, step = i, prev_action=prev_action)
                 else:
                     agent.env.action = np.argmax(agent.get_qs()) + 1 #plus one because of the stupid fucking indexing system
             else:
@@ -435,7 +441,7 @@ def practice(agent, naive = False, standard_practice = False,
                         avail_actions = [action for action in agent.env.ACTIONS if action != agent.env.action] #grab all actions except the one currently selected
                         agent.env.action = random.sample(avail_actions, k = 1)[0] #need to take the first element of the list because thats how random.sample outputs it
                 elif dp_solution:
-                    agent.env.action = compute_optimal_action(agent, dp_policy, step = i)
+                    agent.env.action = compute_optimal_action(agent, dp_policy, step = i, prev_action = prev_action)
                 else: 
                     agent.env.action = random.randint(np.min(agent.env.ACTIONS),np.max(agent.env.ACTIONS))
 
@@ -551,7 +557,8 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
 
     return [mem_list, policy_list]
 
-def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs= False):
+def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs= False, 
+                        prev_action = False):
     '''
     Function to test a generic policy for performance in simulated e.coli system
     Args:
@@ -574,45 +581,27 @@ def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs=
     drugs = define_mira_landscapes()
     agent = DrugSelector(hp = hp, drugs = drugs)
 
-    rewards,agent, policy = practice(deepcopy(agent), dp_solution=True, policy = policy)
+    rewards,agent, policy = practice(deepcopy(agent), dp_solution=True, 
+                                     policy = policy, prev_action = prev_action)
 
     mem = agent.master_memory
     return mem
 
-def sweep_replicate_policy(policies):
+def sweep_replicate_policy(agent):
     '''
     Function to sweep the policy learned by a given replicate at every episode
     Args:
         episodes: int
             how many episodes should be evaluated per policy
         normalize_drugs: bool
-    '''
-    def clean_policy(policy, reset):
-        policy = policy[['state', 'action', 'prob_selection']]
-        states = pd.unique(policy['state'])
-        
-        #loop through states to construct the list
-        outer_list = []
-        for i in iter(states):
-        #this does argmax
-            policy_i = policy[policy['state'] == i] 
-            policy_i = policy_i[policy_i['prob_selection'] == np.max(policy_i['prob_selection'])]
-            if len(policy_i) >1: 
-                policy_i = policy_i.iloc[0]
-            inner_list = [int(policy_i['action']) -1 for i in range(reset)]
-            outer_list.append(inner_list)
-        
-        return outer_list 
-        
-    
-    ep_numbers = pd.unique(policies['episode'])
-    reset = pd.unique(policies['reset'])[0]
-    
+    '''    
+    policies = agent.policies
+    reset = agent.hp.RESET_EVERY
+
     mem_list = []
-    for i in iter(ep_numbers): 
-        policy = policies[policies['episode'] == i]
-        policy = clean_policy(policy, reset = reset)
-        mem_i = test_generic_policy(policy, num_steps = reset)
+    for i in range(len(policies)): 
+        policy = policies[i][0]
+        mem_i = test_generic_policy(policy, num_steps = reset, prev_action = True)
         mem_list.append(mem_i)
     
     return mem_list

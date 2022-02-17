@@ -381,13 +381,6 @@ def test_compute_implied_policy(ds_one_traj):
     bools = [np.sum(i) == 1 for i in policy]
     assert all(bools)
 
-#test that we can compute implied policyt for fitness vector trained RL
-def test_compute_implied_policy2(ds_one_traj_fitness):
-    policy = ds_one_traj_fitness.compute_implied_policy(update = False)
-    bools = [np.isclose(np.sum(i),1) for i in policy]
-    assert all(bools)
-
-
 def test_practice(ds_one_traj_fitness):
     reward, agent, policy = practice(ds_one_traj_fitness, dp_solution=True)
     reward, agent, policy = practice(ds_one_traj_fitness, naive=True)

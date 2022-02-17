@@ -587,7 +587,7 @@ def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs=
     mem = agent.master_memory
     return mem
 
-def sweep_replicate_policy(agent):
+def sweep_replicate_policy(agent, episodes = 500):
     '''
     Function to sweep the policy learned by a given replicate at every episode
     Args:
@@ -601,7 +601,8 @@ def sweep_replicate_policy(agent):
     mem_list = []
     for i in range(len(policies)): 
         policy = policies[i][0]
-        mem_i = test_generic_policy(policy, num_steps = reset, prev_action = True)
+        mem_i = test_generic_policy(policy, num_steps = reset, 
+                                    prev_action = True, episodes=episodes)
         mem_list.append(mem_i)
     
     return mem_list

@@ -30,6 +30,7 @@ class evol_env:
                         noise_modifier = 1, 
                         add_noise = True, 
                         average_outcomes = False, 
+                        total_resistance = False,
                         starting_genotype = 0):
         #define switch for whether to record the state vector or fitness for the learner
         self.TRAIN_INPUT = train_input
@@ -75,12 +76,13 @@ class evol_env:
         #define victory threshold
         self.WIN_THRESHOLD = win_threshold # number of player actions before the game is called
         self.WIN_REWARD = win_reward
-        self.starting_genotype = starting_genotype
+        self.STARTING_GENOTYPE = starting_genotype
 
         self.done = False
 
         #should each episode start with a random scatter of genotypes?
         self.RANDOM_START = random_start
+        self.TOTAL_RESISTANCE = total_resistance
 
         #define landscapes
         if drugs == "none": 
@@ -220,17 +222,39 @@ class evol_env:
             self.pop_wcount = 0
         return
 
-    def calc_reward(self, fitness):
+    def compute_average_fitness(self):
+        #function to compute the average fitness to all available drugs in the panel
+        fitnesses = []
+        for i in iter(self.ACTIONS):
+            fitness = np.dot(self.drugs[i-1], self.state_vector)
+            fitnesses.append(fitness)
+
+        return np.mean(fitnesses)
+
+    def calc_reward(self, fitness, total_resistance = False):
     #okay so if fitness is low - this number will be higher
     #"winning" the game is associated with a huge reward while losing a huge penalty
-        if self.pop_wcount >= self.WIN_THRESHOLD:
-            reward = -self.WIN_REWARD
-            self.DONE = True
-        elif self.player_wcount >= self.WIN_THRESHOLD: 
-            reward = self.WIN_REWARD
-            self.DONE = True
-        else: 
-            reward = np.mean(1 - fitness)
+
+        if total_resistance:
+            if self.pop_wcount >= self.WIN_THRESHOLD:
+                reward = -self.WIN_REWARD
+                self.DONE = True
+            elif self.player_wcount >= self.WIN_THRESHOLD: 
+                reward = self.WIN_REWARD
+                self.DONE = True
+            else: 
+                #need to compute the average fitness across all drugs and then do 1- that
+                reward = (1 - self.compute_average_fitness)
+        else:
+            if self.pop_wcount >= self.WIN_THRESHOLD:
+                reward = -self.WIN_REWARD
+                self.DONE = True
+            elif self.player_wcount >= self.WIN_THRESHOLD: 
+                reward = self.WIN_REWARD
+                self.DONE = True
+            else: 
+                reward = np.mean(1 - fitness)
+
         return reward
     
     def add_noise(self, fitness):
@@ -274,7 +298,7 @@ class evol_env:
             self.state_vector = np.ones((2**self.N,1))/2**self.N
         else:
             self.state_vector  = np.zeros((2**self.N,1))
-            self.state_vector[self.starting_genotype][0] = 1
+            self.state_vector[self.STARTING_GENOTYPE][0] = 1
 
         #reset fitness vector and action number
         self.fitness = []

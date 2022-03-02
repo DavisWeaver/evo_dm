@@ -62,6 +62,7 @@ class hyperparameters:
         self.NOISE_MODIFIER = 1  #enable us to increase or decrease the amount of noise in the system
         self.NUM_DRUGS = 4
         self.MIRA = True
+        self.TOTAL_RESISTANCE = False
 
         #define victory conditions for player and pop
         self.PLAYER_WCUTOFF = 0.001
@@ -112,7 +113,8 @@ class DrugSelector:
                             add_noise = self.hp.NOISE, 
                             noise_modifier= self.hp.NOISE_MODIFIER,
                             average_outcomes=self.hp.AVERAGE_OUTCOMES, 
-                            starting_genotype = self.hp.STARTING_GENOTYPE)
+                            starting_genotype = self.hp.STARTING_GENOTYPE,
+                            total_resistance= self.hp.TOTAL_RESISTANCE)
 
         # main model  # gets trained every step
         self.model = self.create_model()
@@ -670,7 +672,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   learning_rate = 0.002, minibatch_size = 400, 
                   pre_trained = False, 
                   agent = "none",
-                  update_target_every = 310):
+                  update_target_every = 310, total_resistance = False):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
     to try and minimize the fitness of a population evolving on a landscape.
@@ -751,6 +753,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     hp.MIRA = mira
     hp.MINIBATCH_SIZE = int(minibatch_size)
     hp.UPDATE_TARGET_EVERY = int(update_target_every)
+    hp.TOTAL_RESISTANCE = total_resistance
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes

@@ -62,6 +62,7 @@ class hyperparameters:
         self.NOISE_MODIFIER = 1  #enable us to increase or decrease the amount of noise in the system
         self.NUM_DRUGS = 4
         self.MIRA = True
+        self.TOTAL_RESISTANCE = False
 
         #define victory conditions for player and pop
         self.PLAYER_WCUTOFF = 0.001
@@ -112,7 +113,8 @@ class DrugSelector:
                             add_noise = self.hp.NOISE, 
                             noise_modifier= self.hp.NOISE_MODIFIER,
                             average_outcomes=self.hp.AVERAGE_OUTCOMES, 
-                            starting_genotype = self.hp.STARTING_GENOTYPE)
+                            starting_genotype = self.hp.STARTING_GENOTYPE,
+                            total_resistance= self.hp.TOTAL_RESISTANCE)
 
         # main model  # gets trained every step
         self.model = self.create_model()
@@ -357,7 +359,7 @@ def compute_optimal_action(agent, policy, step, prev_action = False):
     index = [i for i,j in enumerate(agent.env.state_vector) if j == 1.][0]
 
     if prev_action:
-        action = policy[index][int(agent.env.prev_action)] +1
+        action = policy[index][int(agent.env.poprev_action)-1] +1
     else:
         action = policy[index][step] + 1 #plus one because I made the bad decision to force the actions to be 1,2,3,4 once upon a time
     
@@ -587,7 +589,7 @@ def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs=
     mem = agent.master_memory
     return mem
 
-def sweep_replicate_policy(agent):
+def sweep_replicate_policy(agent, episodes = 500):
     '''
     Function to sweep the policy learned by a given replicate at every episode
     Args:
@@ -601,7 +603,8 @@ def sweep_replicate_policy(agent):
     mem_list = []
     for i in range(len(policies)): 
         policy = policies[i][0]
-        mem_i = test_generic_policy(policy, num_steps = reset, prev_action = True)
+        mem_i = test_generic_policy(policy, num_steps = reset, 
+                                    prev_action = True, episodes=episodes)
         mem_list.append(mem_i)
     
     return mem_list
@@ -669,7 +672,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   learning_rate = 0.002, minibatch_size = 400, 
                   pre_trained = False, 
                   agent = "none",
-                  update_target_every = 310):
+                  update_target_every = 310, total_resistance = False, 
+                  starting_genotype = 0):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
     to try and minimize the fitness of a population evolving on a landscape.
@@ -750,6 +754,8 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     hp.MIRA = mira
     hp.MINIBATCH_SIZE = int(minibatch_size)
     hp.UPDATE_TARGET_EVERY = int(update_target_every)
+    hp.TOTAL_RESISTANCE = total_resistance
+    hp.STARTING_GENOTYPE = starting_genotype
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes

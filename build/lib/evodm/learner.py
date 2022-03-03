@@ -755,7 +755,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     hp.MINIBATCH_SIZE = int(minibatch_size)
     hp.UPDATE_TARGET_EVERY = int(update_target_every)
     hp.TOTAL_RESISTANCE = total_resistance
-    hp.STARTING_GENOTYPE = starting_genotype
+    hp.STARTING_GENOTYPE = int(starting_genotype)
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes

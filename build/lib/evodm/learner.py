@@ -359,7 +359,7 @@ def compute_optimal_action(agent, policy, step, prev_action = False):
     index = [i for i,j in enumerate(agent.env.state_vector) if j == 1.][0]
 
     if prev_action:
-        action = policy[index][int(agent.env.poprev_action)-1] +1
+        action = policy[index][int(agent.env.prev_action)-1] +1
     else:
         action = policy[index][step] + 1 #plus one because I made the bad decision to force the actions to be 1,2,3,4 once upon a time
     

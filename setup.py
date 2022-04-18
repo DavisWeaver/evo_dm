@@ -18,5 +18,4 @@ setup(
       "pymdptoolbox", 
       "pandas"
     ],
-    python_requires='>= 3.6.0, <=3.9.11'
 )

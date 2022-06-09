@@ -7,7 +7,7 @@ from numpy.lib.utils import deprecate
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 from collections import deque
-from evodm.evol_game import evol_env
+from evodm.evol_game import define_drugs, evol_env, generate_landscapes
 from evodm.dpsolve import backwards_induction, dp_env
 import random
 import numpy as np 
@@ -45,7 +45,7 @@ class hyperparameters:
         self.epsilon = 1  # lowercase because its not a constant
         self.EPSILON_DECAY = 0.95
         self.MIN_EPSILON = 0.001
-        self.LEARNING_RATE = 0.002
+        self.LEARNING_RATE = 0.0001
 
         # settings control the evolutionary simulation
         self.NUM_EVOLS = 1 # how many evolutionary steps per time step
@@ -53,8 +53,8 @@ class hyperparameters:
         self.NORMALIZE_DRUGS = True # should fitness values for all landscapes be bound between 0 and 1?
         self.AVERAGE_OUTCOMES = False #should we use the average of infinite evolutionary sims or use a single trajectory?
         # new evolutionary "game" every n steps or n *num_evols total evolutionary movements
-        self.RESET_EVERY = 200
-        self.EPISODES = 50
+        self.RESET_EVERY = 20
+        self.EPISODES = 500
         self.N = 5
         self.RANDOM_START = False
         self.STARTING_GENOTYPE = 0 #default to starting at the wild type genotype
@@ -559,6 +559,51 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
 
     return [mem_list, policy_list]
 
+def mdp_sweep(N, sigma_range = [0,2], num_drugs_max=20, episodes=10, num_steps=20,
+              normalize_drugs=False, num_evals=10):
+    '''
+    Function to evaluate performance of the MDP optimal for different parameter regimes
+        N: int
+        sigma_range: list
+            epistasis constant
+        num_drugs_max: int
+        episodes: int
+            how many episodes should be evaluated per parameter regime
+        num_steps: int
+            episode length
+        normalize_drugs: bool
+        num_evals: int
+            number of parameters to eval between min,max defined by sigma_range and num_drugs_range
+        
+    returns list
+    '''
+
+    sigma_range = np.linspace(sigma_range[0], sigma_range[1], num=num_evals)
+    num_drugs_range = [i+1 for i in range(num_drugs_max)]
+
+    mem_list = []
+    policy_list = []
+
+    for i in iter(sigma_range):
+        for j in iter(num_drugs_range):
+            
+            #define new drug selector class for each of these scenarios
+            hp = hyperparameters()
+            hp.EPISODES = episodes
+            hp.RESET_EVERY = num_steps
+            hp.N = N
+            hp.NUM_DRUGS = j
+            hp.NORMALIZE_DRUGS = normalize_drugs
+            hp.SIGMA = i
+            agent_i = DrugSelector(hp = hp)
+
+            rewards_i, agent_i, policy_i = practice(agent_i, dp_solution = True)
+            mem_i = agent_i.master_memory
+            mem_list.append([mem_i, i, j])
+            policy_list.append([policy_i, i, j])
+
+    return [mem_list, policy_list]
+    
 def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs= False, 
                         prev_action = False):
     '''

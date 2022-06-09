@@ -1,4 +1,3 @@
-from numpy.lib.function_base import average
 from evodm import evol_env, generate_landscapes, define_drugs, normalize_landscapes, run_sim
 from evodm.evol_game import discretize_state
 import pytest
@@ -14,6 +13,15 @@ def env_init():
 @pytest.fixture
 def env_mature():
     env = evol_env(normalize_drugs=True, random_start = False, num_evols =3, add_noise = False)
+    for i in range(100):
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+    return env
+
+@pytest.fixture
+def env_total_resistance():
+    env = evol_env(normalize_drugs=True, random_start = False, num_evols =1, 
+                   add_noise = False, total_resistance= True)
     for i in range(100):
         env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
         env.step()
@@ -131,6 +139,10 @@ def test_normalize_landscapes(example_landscapes):
     mins = [np.min(drug) >= 0 for drug in drugs] 
     assert all([mins, maxes])
 
+
+#need a test to make sure we can compute total resistance across a panel. 
+def test_total_resistance(env_total_resistance):
+    assert isinstance(env_total_resistance.fitness - 1, np.float)
 
 
 

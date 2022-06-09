@@ -15,6 +15,7 @@ __all__ = [
     'run_sim',   
     'define_mira_landscapes', 
     'mdp_mira_sweep',
+    'mdp_mira_sweep',
     'policy_sweep', 
     'test_generic_policy', 
     'sweep_replicate_policy'

@@ -1,21 +1,21 @@
+import matplotlib
+matplotlib.use('TkAgg')
 import numpy as np
+import scipy as sp
 import scipy.linalg as la
 import scipy.optimize as op
 from scipy.stats.stats import pearsonr
+import time
 import copy
-import itertools
-from numpy import dot
-from numpy.linalg import matrix_power
 import matplotlib.pyplot as plt
-import networkx as nx
 import math
+import itertools
+import networkx as nx
 
 class Landscape:
     """
     This class represents Landscapes which are used as the central objects for Markov evolutions and other calculations.
-    Jeff Maltas wrote this module - described in more detail in a published article: 
-    Maltas, J., McNally, D.M. and Wood, K.B. (2021), Evolution in alternating environments with tunable interlandscape correlations. Evolution, 75: 10-24. https://doi.org/10.1111/evo.14121
-    
+
     ...
 
     Attributes
@@ -96,7 +96,7 @@ class Landscape:
 
                 adjFit = [self.ls[j] for j in adjMut]                         # Creates list of fitnesses for each corresponding genotype that is 1 mutation away.
 
-                fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))        # Finds which indices of adjFit are more fit than the current genotype and thus available for mutation.
+                fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))                      # Finds which indices of adjFit are more fit than the current genotype and thus available for mutation.
 
                 fitLen = len(fitter)
                 if fitLen == 0:                                          # If no mutations are more fit, stay in current genotype.
@@ -250,17 +250,6 @@ class Landscape:
         p0[0][0] = 1
         return np.dot(np.linalg.matrix_power(TM, steps), p0)
 
-
-    def evolveJulia(self, steps, p0, store_TM=False):
-        TM = self.get_TM(store_TM)
-
-        if p0 is not None:
-            self.p0 = p0
-        else:
-            p0 = np.zeros((2**self.N,1))
-            p0[0][0] = 1
-        return dot(matrix_power(TM, steps), p0)
-
     def evolve_switching(self, B, steps, store_TM=False):
         """
         Returns an array of genotype occupation probabilities after alternating
@@ -392,131 +381,244 @@ class Landscape:
             fitAB_B.append(np.dot(Bs[i].ls, p)[0])
         return (fitA, fitAB_A, fitAB_B)
 
-    def generate_correlated_landscapes(self, correl, without_shared_max=False, only_shared_max=False, count_tries=False):
+    def graph(self, p=None, verbose=False):
         """
-        Returns landscapes correlated to A for each correlation value specified in correl.
-        The B landscapes will also be stored as a list in the self.Bs attribute
-        If without_shared_max is set, the correlated landscapes will be guaranteed to not have
-        shared maximums with the A landscape. NOTE: running time will dramatically increase with this flag
-        If only_shared_max is set, the correlated landscapes will be guaranteed to have at least
-        one shared maximum with the A landscape. Note both without_shared_max and only_shared_max cannot both be set.
+        Plots a graph representation of this landscape on the current matplotlib figure.
+        If p is set to a vector of occupation probabilities, the edges in the graph will
+        have thickness proportional to the transition probability between nodes.
         """
-        if without_shared_max and only_shared_max:
-            raise Exception("You cannot set both without_shared_max and only_shared_max")
+        TM = self.get_TM()
+        # Transpose TM because draw functions uses transposed version.
+        TM = list(map(list, zip(*TM)))
+
+        # Figure out the length of the bit sequences we're working with
+        N = self.N
+
+        # Generate all possible N-bit sequences
+        genotypes = ["".join(seq) for seq in itertools.product("01", repeat=N)]
+
+        # Turn the unique bit sequences array into a list of tuples with the bit sequence and its corresponding fitness
+        # The tuples can still be used as nodes because they are hashable objects
+        genotypes = [(genotypes[i], self.ls[i]) for i in range(len(genotypes))]
+
+        # Build hierarchical structure for N-bit sequences that differ by 1 bit at each level
+        hierarchy = [[] for i in range(N+1)]
+        for g in genotypes: hierarchy[g[0].count("1")].append(g)
+
+        # Add all unique bit sequences as nodes to the graph
+        G = nx.DiGraph()
+        G.add_nodes_from(genotypes)
+
+        # Add edges with appropriate weights depending on the TM
+        sf = 5 # edge thickness scale factor
+        for i in range(len(TM)):
+            for j in range(len(TM[i])):
+                if TM[i][j] != 0 and i != j:
+                    G.add_edge(genotypes[i], genotypes[j], weight=sf*TM[i][j])
+
+        # Find the local & global min/max
+        maxes = []
+        mins = []
+        for node in G:
+            if len(G[node]) == 0:
+                maxes.append(node)
+            elif len(G[node]) == N:
+                mins.append(node)
+
+        # Determine which is global min/max
+        # this algorithm can probably be simplified because...
+        # global max will always have fitness = 1, and global min fitness = 0
+        globalmax = 0
+        globalmin = 0
+        for i in range(1,len(maxes)):
+            if maxes[i][1] > maxes[globalmax][1]:
+                globalmax = i
+        for i in range(1,len(mins)):
+            if mins[i][1] < mins[globalmin][1]:
+                globalmin = i
+        globalmax = maxes[globalmax]
+        globalmin = mins[globalmin]
+        maxes.remove(globalmax)
+        mins.remove(globalmin)
+
+        # Create label dict for max/min nodes
+        labels = {}
+        labels[globalmax] = "+"
+        labels[globalmin] = "-"
+        for n in maxes:
+            labels[n] = "+"
+        for n in mins:
+            labels[n] = "-"
+
+        # Store all the edge weights in a list so they can be used to control the edge widths when drawn
+        edges = G.edges()
+        weights = [G[u][v]['weight'] for u,v in edges]
+
+        # just using spring layout to generate an initial dummy pos dict
+        pos = nx.spring_layout(G)
+
+        # calculate how many entires in the longest row, it will be N choose N/2
+        # because the longest row will have every possible way of putting N/2 1s (or 0s) into N bits
+        maxLen = math.factorial(N) / math.factorial(N//2)**2
+
+        # Position the nodes in a layered hierarchical structure by modifying pos dict
+        y = 1
+        for row in hierarchy:
+            if len(row) > maxLen: maxLen = len(row)
+        for i in range(len(hierarchy)):
+            levelLen = len(hierarchy[i])
+            # algorithm for horizontal spacing.. may not be 100% correct?
+            offset = (maxLen - levelLen + 1) / maxLen
+            xs = np.linspace(0 + offset / 2, 1 - offset / 2, levelLen)
+            for j in range(len(hierarchy[i])):
+                pos[hierarchy[i][j]] = (xs[j], y)
+            y -= 1 / N
+
+        # Print node structure to console
+        if verbose:
+            for i in range(len(hierarchy)):
+                print(("Row {}: " + str([h[0] for h in hierarchy[i]]).strip('[]')).format(i+1))
+            print()
+
+        node_size = 500
+        if p is not None:
+            node_size = [75 + 1000*val for val in p]
+
+        # Draw the graph
+        plt.axis('off')
+        node_vals = [g[1] for g in G.nodes()]
+        nx.draw(G, pos, with_labels=False, width=weights, linewidths=1, cmap=plt.get_cmap('Greys'), node_color=node_vals,node_size=node_size)
+        nx.draw_networkx_labels(G,pos,labels,font_size=16,font_color='red') # labels for min/max nodes
+        ax = plt.gca()
+        ax.collections[0].set_edgecolor("#000000")
+
+    def graphTraj(self, TM, N, p=None, verbose=False):
+        """
+        Modified version of graph(). Depreciated.
+        """
+        #TM = self.get_TM()
+        # Transpose TM because draw functions uses transposed version.
+        TM = list(map(list, zip(*TM)))
+
+        # Figure out the length of the bit sequences we're working with
+        N = N
+
+        # Generate all possible N-bit sequences
+        genotypes = ["".join(seq) for seq in itertools.product("01", repeat=N)]
+
+        # Turn the unique bit sequences array into a list of tuples with the bit sequence and its corresponding fitness
+        # The tuples can still be used as nodes because they are hashable objects
+        genotypes = [(genotypes[i], self.ls[i]) for i in range(len(genotypes))]
+
+        # Build hierarchical structure for N-bit sequences that differ by 1 bit at each level
+        hierarchy = [[] for i in range(N+1)]
+        for g in genotypes: hierarchy[g[0].count("1")].append(g)
+
+        # Add all unique bit sequences as nodes to the graph
+        G = nx.DiGraph()
+        G.add_nodes_from(genotypes)
+
+        # Add edges with appropriate weights depending on the TM
+        sf = 5 # edge thickness scale factor
+        for i in range(len(TM)):
+            for j in range(len(TM[i])):
+                if TM[i][j] != 0 and i != j:
+                    G.add_edge(genotypes[i], genotypes[j], weight=sf*TM[i][j])
+
+        # Find the local & global min/max
+        maxes = []
+        mins = []
+        for node in G:
+            if len(G[node]) == 0:
+                maxes.append(node)
+            elif len(G[node]) == N:
+                mins.append(node)
+
+        # Create label dict for max/min nodes
+        labels = {}
+        for n in maxes:
+            labels[n] = " "
+        for n in mins:
+            labels[n] = " "
+
+        # Store all the edge weights in a list so they can be used to control the edge widths when drawn
+        edges = G.edges()
+        weights = [G[u][v]['weight'] for u,v in edges]
+
+        # just using spring layout to generate an initial dummy pos dict
+        pos = nx.spring_layout(G)
+
+        # calculate how many entires in the longest row, it will be N choose N/2
+        # because the longest row will have every possible way of putting N/2 1s (or 0s) into N bits
+        maxLen = math.factorial(N) / math.factorial(N//2)**2
+
+        # Position the nodes in a layered hierarchical structure by modifying pos dict
+        y = 1
+        for row in hierarchy:
+            if len(row) > maxLen: maxLen = len(row)
+        for i in range(len(hierarchy)):
+            levelLen = len(hierarchy[i])
+            # algorithm for horizontal spacing.. may not be 100% correct?
+            offset = (maxLen - levelLen + 1) / maxLen
+            xs = np.linspace(0 + offset / 2, 1 - offset / 2, levelLen)
+            for j in range(len(hierarchy[i])):
+                pos[hierarchy[i][j]] = (xs[j], y)
+            y -= 1 / N
+
+        # Print node structure to console
+        if verbose:
+            for i in range(len(hierarchy)):
+                print(("Row {}: " + str([h[0] for h in hierarchy[i]]).strip('[]')).format(i+1))
+            print()
+
+        node_size = 500
+        if p is not None:
+            node_size = [10 + 1000*val for val in p]
+
+        # Draw the graph
+        plt.axis('off')
+        node_vals = [g[1] for g in G.nodes()]
+        nx.draw(G, pos, with_labels=False, width=weights, linewidths=1, cmap=plt.get_cmap('Greys'), node_color=node_vals,node_size=node_size)
+        nx.draw_networkx_labels(G,pos,labels,font_size=16,font_color='red') # labels for min/max nodes
+        ax = plt.gca()
+        ax.collections[0].set_edgecolor("#000000")
+
+    def generate_correlated_landscapes(self, correl):
+
         Bs = [None]*len(correl)
         Astd = np.std(self.ls, ddof=1) # have to use ddof=1 to match matlab sample std
         Amean = np.mean(self.ls)
-        ls = (self.ls - Amean)/Astd
-        M = la.orth(np.array([np.ones(2**self.N), ls]).T)
-        if not count_tries:
-            y0 = np.random.uniform(0,1,(2**self.N,1))
-            dp = np.dot(y0.T, M)
-            y0 = y0 - np.dot(M, dp.T)
-            y0_std = np.std(y0, ddof=1)
-            y0 /= y0_std
-            y0 = np.array(y0.T[0])
-        else: tries = np.zeros(len(correl))
+        A = (self.ls - Amean)/Astd
+        y0 = np.random.uniform(-1,1,(2**self.N,2**self.N))
+        M = la.orth(np.array([np.ones(2**self.N), A]).T)
+        dp = np.dot(y0.T, M)
+        y0 = y0 - np.dot(M, dp.T)
+        y0_std = np.matrix([np.std(row, ddof=1) for row in y0])
+        y0 = np.array(np.dot(y0, np.linalg.pinv(y0_std)).T)[0]
 
         rhos = np.array([])
         for i in range(len(correl)):
             rhos = np.append(rhos, correl[i])
-        if without_shared_max or only_shared_max:
-            Amaxes = self.find_max_indices()
+
         for i in range(len(rhos)):
-            if count_tries:
-                y0 = np.random.uniform(0,1,(2**self.N,1))
-                dp = np.dot(y0.T, M)
-                y0 = y0 - np.dot(M, dp.T)
-                y0_std = np.std(y0, ddof=1)
-                y0 /= y0_std
-                y0 = np.array(y0.T[0])
-                tries[i] += 1
             r = rhos[i]
-            Als = np.array(copy.deepcopy(self.ls))
-            if without_shared_max and r != -1:
-                if r == 1: raise Exception("It is not possible to have a landscape with 1 correlation that doesn't share a maximum")
-                shared_max = True
-                while shared_max:
-                    shared_max = False
-                    if abs(r) < np.finfo(np.float64).eps: # zero correlation case
-                        y = Amean + y0 * Astd
-                        Bs[i] = Landscape(self.N, self.sigma, ls=y, parent=self)
-                        r = 0
-                    elif r < 0:
-                        r = -r
-                        Als = -Als
-                    if r < 1 and r > 0:
-                        fun = lambda beta : r - pearsonr(Als, y0 + beta*(Als-y0))[0]
-                        beta = op.brentq(fun, 0, 1)
-                        y = y0 + beta * (Als-y0)
-                        y = Amean + y * Astd
-                        Bs[i] = Landscape(self.N, self.sigma, ls=y.T, parent=self)
-                    Bmaxes = Bs[i].find_max_indices()
-                    for m in Amaxes:
-                        if m in Bmaxes:
-                            shared_max = True
-                            break
-                    if shared_max: # re-roll y0
-                        if count_tries: tries[i] += 1
-                        y0 = np.random.uniform(0,1,(2**self.N,1))
-                        dp = np.dot(y0.T, M)
-                        y0 = y0 - np.dot(M, dp.T)
-                        y0_std = np.std(y0, ddof=1)
-                        y0 /= y0_std
-                        y0 = np.array(y0.T[0])
-                        #if tries > 100 and tries % 100 == 0: print("Correlation {:.2f} has taken {} tries".format(r, tries))
-            elif only_shared_max and r != 1:
-                if r == -1: raise Exception("It is not possible to have a landscape with -1 correlation that shares a maximum")
-                shared_max = False
-                while not shared_max:
-                    if abs(r) < np.finfo(np.float64).eps: # zero correlation case
-                        y = Amean + y0 * Astd
-                        Bs[i] = Landscape(self.N, self.sigma, ls=y, parent=self)
-                        r = 0
-                    elif r < 0:
-                        r = -r
-                        Als = -Als
-                    if r < 1 and r > 0:
-                        fun = lambda beta : r - pearsonr(Als, y0 + beta*(Als-y0))[0]
-                        beta = op.brentq(fun, 0, 1)
-                        y = y0 + beta * (Als-y0)
-                        y = Amean + y * Astd
-                        Bs[i] = Landscape(self.N, self.sigma, ls=y.T, parent=self)
-                    Bmaxes = Bs[i].find_max_indices()
-                    for m in Amaxes:
-                        if m in Bmaxes:
-                            shared_max = True
-                            break
-                    if not shared_max: # re-roll y0
-                        if count_tries: tries[i] += 1
-                        y0 = np.random.uniform(0,1,(2**self.N,1))
-                        dp = np.dot(y0.T, M)
-                        y0 = y0 - np.dot(M, dp.T)
-                        y0_std = np.std(y0, ddof=1)
-                        y0 /= y0_std
-                        y0 = np.array(y0.T[0])
-                        #if tries > 100 and tries % 100 == 0: print("Correlation {:.2f} has taken {} tries".format(r, tries))
-            else:
-                if abs(r) < np.finfo(np.float64).eps: # zero correlation case
-                    y = Amean + y0 * Astd
-                    Bs[i] = Landscape(self.N, self.sigma, ls=y, parent=self)
-                    r = 0
-                elif r == 1: # guaranteed to have a shared max, so the only_shared_max case is handled here already
-                    Bs[i] = Landscape(self.N, self.sigma, ls=Als, parent=self)
-                elif r == -1: # guaranteed to not have a shared max, so the without_shared_max case is handled here already
-                    Bs[i] = Landscape(self.N, self.sigma, ls=-Als, parent=self)
-                elif r < 0:
-                    r = -r
-                    Als = -Als
-                if r < 1 and r > 0:
-                    fun = lambda beta : r - pearsonr(Als, y0 + beta*(Als-y0))[0]
-                    beta = op.brentq(fun, 0, 1)
-                    y = y0 + beta * (Als-y0)
-                    y = Amean + y * Astd
-                    Bs[i] = Landscape(self.N, self.sigma, ls=y.T, parent=self)
-        self.Bs = Bs
-        if count_tries:
-            return Bs, tries
+            x = np.array(copy.deepcopy(A))
+            if r == 1:
+                Bs[i] = Landscape(self.N, self.sigma, ls=x, parent=self)
+            elif r == -1:
+                Bs[i] = Landscape(self.N, self.sigma, ls=-x, parent=self)
+            elif r < 0:
+                r = -r
+                x = -x
+            elif r == 0:
+                y = Amean + y0 * Astd
+                Bs[i] = Landscape(self.N, self.sigma, ls=y, parent=self)
+            if r < 1 and r > 0:
+                fun = lambda beta : r - pearsonr(x, y0 + beta*(x-y0))[0]
+                beta = op.brentq(fun, 0, 1)
+                y = y0 + beta * (x-y0)
+                y = Amean + y * Astd
+                Bs[i] = Landscape(self.N, self.sigma, ls=y.T, parent=self)
         return Bs
 
     def calc_nonzero_steadystate_prob(self, steps):
@@ -638,258 +740,6 @@ class Landscape:
                     flag = True
                     break
         return steps_list
-
-    def generate_shuffled_landscape(self, n):
-        """
-        Generates a landscape based on this landscape which has shuffled n random fitness values.
-        """
-        shuffled_ls = copy.deepcopy(self.ls)
-        for i in range(0, n):
-            index1 = np.random.randint(0, 2**self.N)
-            index2 = np.random.randint(0, 2**self.N)
-            val1 = shuffled_ls[index1]
-            val2 = shuffled_ls[index2]
-            if index1 != index2:
-                shuffled_ls[index1], shuffled_ls[index2] = val2, val1
-        return Landscape(self.N, self.sigma, ls=shuffled_ls)
-
-    def get_anticorrelated_landscape(self, pair):
-        """
-        Generates a landscape based on this landscape which has shuffled n random fitness values.
-        """
-        sorted_ls = np.sort(self.ls)
-        sortedpair_ls = np.sort(pair.ls)
-
-        anticorrelated_ls = copy.deepcopy(self.ls)
-
-        for i in range(2**self.N):
-            index1 = np.where(self.ls == sorted_ls[i])[0]
-            index2 = np.where(pair.ls == sortedpair_ls[2**self.N - i - 1])[0]
-
-            anticorrelated_ls[index1] = pair.ls[index2]
-
-        return Landscape(pair.N, pair.sigma, ls=anticorrelated_ls)
-
-    def graph(self, p=None, verbose=False):
-        """
-        Plots a graph representation of this landscape on the current matplotlib figure.
-        If p is set to a vector of occupation probabilities, the edges in the graph will
-        have thickness proportional to the transition probability between nodes.
-        """
-        TM = self.get_TM()
-        # Transpose TM because draw functions uses transposed version.
-        TM = list(map(list, zip(*TM)))
-
-        # Figure out the length of the bit sequences we're working with
-        N = self.N
-
-        # Generate all possible N-bit sequences
-        genotypes = ["".join(seq) for seq in itertools.product("01", repeat=N)]
-
-        # Turn the unique bit sequences array into a list of tuples with the bit sequence and its corresponding fitness
-        # The tuples can still be used as nodes because they are hashable objects
-        genotypes = [(genotypes[i], self.ls[i]) for i in range(len(genotypes))]
-
-        # Build hierarchical structure for N-bit sequences that differ by 1 bit at each level
-        hierarchy = [[] for i in range(N+1)]
-        for g in genotypes: hierarchy[g[0].count("1")].append(g)
-
-        # Add all unique bit sequences as nodes to the graph
-        G = nx.DiGraph()
-        G.add_nodes_from(genotypes)
-
-        # Add edges with appropriate weights depending on the TM
-        sf = 5 # edge thickness scale factor
-        for i in range(len(TM)):
-            for j in range(len(TM[i])):
-                if TM[i][j] != 0 and i != j:
-                    G.add_edge(genotypes[i], genotypes[j], weight=sf*TM[i][j])
-
-        # Find the local & global min/max
-        maxes = []
-        mins = []
-        for node in G:
-            if len(G[node]) == 0:
-                maxes.append(node)
-            elif len(G[node]) == N:
-                mins.append(node)
-
-        # Determine which is global min/max
-        # this algorithm can probably be simplified because...
-        # global max will always have fitness = 1, and global min fitness = 0
-        globalmax = 0
-        globalmin = 0
-        for i in range(1,len(maxes)):
-            if maxes[i][1] > maxes[globalmax][1]:
-                globalmax = i
-        for i in range(1,len(mins)):
-            if mins[i][1] < mins[globalmin][1]:
-                globalmin = i
-        globalmax = maxes[globalmax]
-        globalmin = mins[globalmin]
-        maxes.remove(globalmax)
-        mins.remove(globalmin)
-
-        # Create label dict for max/min nodes
-        labels = {}
-        labels[globalmax] = "+"
-        labels[globalmin] = "-"
-        for n in maxes:
-            labels[n] = "+"
-        for n in mins:
-            labels[n] = "-"
-
-        # Store all the edge weights in a list so they can be used to control the edge widths when drawn
-        edges = G.edges()
-        weights = [G[u][v]['weight'] for u,v in edges]
-
-        # just using spring layout to generate an initial dummy pos dict
-        pos = nx.spring_layout(G)
-
-        # calculate how many entires in the longest row, it will be N choose N/2
-        # because the longest row will have every possible way of putting N/2 1s (or 0s) into N bits
-        maxLen = math.factorial(N) / math.factorial(N//2)**2
-
-        # Position the nodes in a layered hierarchical structure by modifying pos dict
-        y = 1
-        for row in hierarchy:
-            if len(row) > maxLen: maxLen = len(row)
-        for i in range(len(hierarchy)):
-            levelLen = len(hierarchy[i])
-            # algorithm for horizontal spacing.. may not be 100% correct?
-            offset = (maxLen - levelLen + 1) / maxLen
-            xs = np.linspace(0 + offset / 2, 1 - offset / 2, levelLen)
-            for j in range(len(hierarchy[i])):
-                pos[hierarchy[i][j]] = (xs[j], y)
-            y -= 1 / N
-
-        # Print node structure to console
-        if verbose:
-            for i in range(len(hierarchy)):
-                print(("Row {}: " + str([h[0] for h in hierarchy[i]]).strip('[]')).format(i+1))
-            print()
-
-        node_size = 500
-        if p is not None:
-            node_size = [75 + 1000*val for val in p]
-
-        # Draw the graph
-        plt.axis('off')
-        node_vals = [g[1] for g in G.nodes()]
-        nx.draw(G, pos, with_labels=False, width=weights, linewidths=1, cmap=plt.get_cmap('Greys'), node_color=node_vals,node_size=node_size)
-        nx.draw_networkx_labels(G,pos,labels,font_size=16,font_color='red') # labels for min/max nodes
-        ax = plt.gca()
-        ax.collections[0].set_edgecolor("#000000")
-
-    def graphTraj(self, TM, N, p=None, verbose=False):
-        """
-        Modified version of graph(). Deprecated.
-        """
-        #TM = self.get_TM()
-        # Transpose TM because draw functions uses transposed version.
-        TM = list(map(list, zip(*TM)))
-
-        # Figure out the length of the bit sequences we're working with
-        N = N
-
-        # Generate all possible N-bit sequences
-        genotypes = ["".join(seq) for seq in itertools.product("01", repeat=N)]
-
-        # Turn the unique bit sequences array into a list of tuples with the bit sequence and its corresponding fitness
-        # The tuples can still be used as nodes because they are hashable objects
-        genotypes = [(genotypes[i], self.ls[i]) for i in range(len(genotypes))]
-
-        # Build hierarchical structure for N-bit sequences that differ by 1 bit at each level
-        hierarchy = [[] for i in range(N+1)]
-        for g in genotypes: hierarchy[g[0].count("1")].append(g)
-
-        # Add all unique bit sequences as nodes to the graph
-        G = nx.DiGraph()
-        G.add_nodes_from(genotypes)
-
-        # Add edges with appropriate weights depending on the TM
-        sf = 5 # edge thickness scale factor
-        for i in range(len(TM)):
-            for j in range(len(TM[i])):
-                if TM[i][j] != 0 and i != j:
-                    G.add_edge(genotypes[i], genotypes[j], weight=sf*TM[i][j])
-
-        # Find the local & global min/max
-        maxes = []
-        mins = []
-        for node in G:
-            if len(G[node]) == 0:
-                maxes.append(node)
-            elif len(G[node]) == N:
-                mins.append(node)
-
-        # Create label dict for max/min nodes
-        labels = {}
-        for n in maxes:
-            labels[n] = " "
-        for n in mins:
-            labels[n] = " "
-
-        # Store all the edge weights in a list so they can be used to control the edge widths when drawn
-        edges = G.edges()
-        weights = [G[u][v]['weight'] for u,v in edges]
-
-        # just using spring layout to generate an initial dummy pos dict
-        pos = nx.spring_layout(G)
-
-        # calculate how many entires in the longest row, it will be N choose N/2
-        # because the longest row will have every possible way of putting N/2 1s (or 0s) into N bits
-        maxLen = math.factorial(N) / math.factorial(N//2)**2
-
-        # Position the nodes in a layered hierarchical structure by modifying pos dict
-        y = 1
-        for row in hierarchy:
-            if len(row) > maxLen: maxLen = len(row)
-        for i in range(len(hierarchy)):
-            levelLen = len(hierarchy[i])
-            # algorithm for horizontal spacing.. may not be 100% correct?
-            offset = (maxLen - levelLen + 1) / maxLen
-            xs = np.linspace(0 + offset / 2, 1 - offset / 2, levelLen)
-            for j in range(len(hierarchy[i])):
-                pos[hierarchy[i][j]] = (xs[j], y)
-            y -= 1 / N
-
-        # Print node structure to console
-        if verbose:
-            for i in range(len(hierarchy)):
-                print(("Row {}: " + str([h[0] for h in hierarchy[i]]).strip('[]')).format(i+1))
-            print()
-
-        node_size = 500
-        if p is not None:
-            node_size = [10 + 1000*val for val in p]
-
-        # Draw the graph
-        plt.axis('off')
-        node_vals = [g[1] for g in G.nodes()]
-        nx.draw(G, pos, with_labels=False, width=weights, linewidths=1, cmap=plt.get_cmap('Greys'), node_color=node_vals,node_size=node_size)
-        nx.draw_networkx_labels(G,pos,labels,font_size=16,font_color='red') # labels for min/max nodes
-        ax = plt.gca()
-        ax.collections[0].set_edgecolor("#000000")
-
-    def get_correlated_landscape(self, pair):
-        """
-        Generates a landscape based on this landscape which has shuffled n random fitness values.
-        """
-        sorted_ls = np.sort(self.ls)
-        sortedpair_ls = np.sort(pair.ls)
-
-        anticorrelated_ls = copy.deepcopy(self.ls)
-
-        for i in range(2**self.N):
-            index1 = np.where(self.ls == sorted_ls[i])[0]
-            index2 = np.where(pair.ls == sortedpair_ls[i])[0]
-
-            anticorrelated_ls[index1] = pair.ls[index2]
-
-        return Landscape(pair.N, pair.sigma, ls=anticorrelated_ls)
-
-
 
     def __repr__(self):
         return str(self.ls)

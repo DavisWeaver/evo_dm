@@ -3,15 +3,13 @@
 # tutorial: https://pythonprogramming.net/training-deep-q-learning-dqn-reinforcement-learning-python-tutorial/?completed=/deep-q-learning-dqn-reinforcement-learning-python-tutorial/
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
-from numpy.lib.utils import deprecate
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 from collections import deque
-from evodm.evol_game import define_drugs, evol_env, generate_landscapes
+from evodm.evol_game import evol_env
 from evodm.dpsolve import backwards_induction, dp_env
 import random
 import numpy as np 
-import pandas as pd
 from tqdm import tqdm
 from copy import deepcopy
 from itertools import combinations
@@ -560,7 +558,7 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
     return [mem_list, policy_list]
 
 def mdp_sweep(N, sigma_range = [0,2], num_drugs_max=20, episodes=10, num_steps=20,
-              normalize_drugs=False, num_evals=10):
+              normalize_drugs=False, num_evals=10, replicates = 3):
     '''
     Function to evaluate performance of the MDP optimal for different parameter regimes
         N: int
@@ -581,28 +579,37 @@ def mdp_sweep(N, sigma_range = [0,2], num_drugs_max=20, episodes=10, num_steps=2
     sigma_range = np.linspace(sigma_range[0], sigma_range[1], num=num_evals)
     num_drugs_range = [i+1 for i in range(num_drugs_max)]
 
-    mem_list = []
-    policy_list = []
+    mem_list_dp = []
+    policy_list_dp = []
+    mem_list_random = []
 
     for i in iter(sigma_range):
         for j in iter(num_drugs_range):
+            for z in range(replicates):
             
-            #define new drug selector class for each of these scenarios
-            hp = hyperparameters()
-            hp.EPISODES = episodes
-            hp.RESET_EVERY = num_steps
-            hp.N = N
-            hp.NUM_DRUGS = j
-            hp.NORMALIZE_DRUGS = normalize_drugs
-            hp.SIGMA = i
-            agent_i = DrugSelector(hp = hp)
+                #define new drug selector class for each of these scenarios
+                hp = hyperparameters()
+                hp.EPISODES = episodes
+                hp.RESET_EVERY = num_steps
+                hp.N = N
+                hp.NUM_DRUGS = j
+                hp.NORMALIZE_DRUGS = normalize_drugs
+                hp.SIGMA = i
+                agent_i = DrugSelector(hp = hp)
 
-            rewards_i, agent_i, policy_i = practice(agent_i, dp_solution = True)
-            mem_i = agent_i.master_memory
-            mem_list.append([mem_i, i, j])
-            policy_list.append([policy_i, i, j])
 
-    return [mem_list, policy_list]
+                #Solve the MDP
+                rewards_i, agent_dp, policy_dp = practice(deepcopy(agent_i), dp_solution = True)
+                mem_i = agent_dp.master_memory
+                mem_list_dp.append([mem_i, i, j, z])
+                policy_list_dp.append([policy_dp, i, j, z])
+
+                #Do it for a random
+                rewards_i, agent_random, policy_random = practice(deepcopy(agent_i), naive=True)
+                mem_i = agent_random.master_memory
+                mem_list_random.append(mem_i, i, j, z)
+
+    return [mem_list_dp, policy_list_dp, mem_list_random]
     
 def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs= False, 
                         prev_action = False):

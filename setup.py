@@ -13,7 +13,6 @@ setup(
       "tqdm",
       "scipy", 
       "networkx", 
-      "matplotlib~=3.3.4", 
       "pytest", 
       "pymdptoolbox", 
       "pandas"

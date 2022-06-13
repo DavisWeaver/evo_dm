@@ -329,7 +329,7 @@ def s_solve(y):
 def generate_landscapes(N = 5, sigma = 0.5, correl = np.linspace(-1.0,1.0,51)):
 
     A = Landscape(N, sigma)
-    Bs = A.generate_correlated_landscapes(correl, only_shared_max=False)
+    Bs = A.generate_correlated_landscapes(correl)
 
     return Bs
 

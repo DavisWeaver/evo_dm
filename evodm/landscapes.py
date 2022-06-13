@@ -235,19 +235,22 @@ class Landscape:
             adjMut = [i ^ (1 << m) for m in mut]
             adjFit = [self.ls[i] for i in adjMut]
             fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))
-            fitLen = len(fitter)
+            fitLen = len(fitter) 
             if fitLen == self.N:
                 mins.append(i)
         return mins
 
-    def evolve(self, steps, store_TM=False):
+    def evolve(self, steps, p0, store_TM=False):
         """
         Returns an array of genotype occupation probabilities after stepping in
         this landscape steps times.
         """
         TM = self.get_TM(store_TM)
-        p0 = np.zeros((2**self.N,1))
-        p0[0][0] = 1
+        if p0 is not None:
+            self.p0 = p0
+        else:
+            p0 = np.zeros((2**self.N,1))
+            p0[0][0] = 1
         return np.dot(np.linalg.matrix_power(TM, steps), p0)
 
     def evolve_switching(self, B, steps, store_TM=False):

@@ -413,10 +413,11 @@ def run_sim(evol_steps, N, sigma, state_vector, drugs, action,
         reward.append(np.dot(landscape_to_evolve.ls,state_vector))  
 
         # Performs a single evolution step 
-        state_vector = landscape_to_evolve.evolveJulia(1, state_vector)
+        state_vector = landscape_to_evolve.evolve(1, p0=state_vector)
         
     if not average_outcomes:
         state_vector = discretize_state(state_vector) #discretize again before sending it back
+        
     reward = np.squeeze(reward)
     return reward, state_vector
 

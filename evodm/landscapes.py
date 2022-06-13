@@ -380,7 +380,9 @@ class Landscape:
 
     
     def generate_correlated_landscapes(self, correl):
-
+        """ 
+        generates correlated landscapes according to the np.linspace specified in 'correl'
+        """
         Bs = [None]*len(correl)
         Astd = np.std(self.ls, ddof=1) # have to use ddof=1 to match matlab sample std
         Amean = np.mean(self.ls)
@@ -389,7 +391,7 @@ class Landscape:
         M = la.orth(np.array([np.ones(2**self.N), A]).T)
         dp = np.dot(y0.T, M)
         y0 = y0 - np.dot(M, dp.T)
-        y0_std = np.matrix([np.std(row, ddof=1) for row in y0])
+        y0_std = np.array([[np.std(row, ddof=1) for row in y0]])
         y0 = np.array(np.dot(y0, np.linalg.pinv(y0_std)).T)[0]
 
         rhos = np.array([])

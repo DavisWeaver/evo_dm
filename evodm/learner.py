@@ -409,7 +409,7 @@ def practice(agent, naive = False, standard_practice = False,
     #initialize list of per episode rewards
     ep_rewards = []
     for episode in tqdm(range(1, agent.hp.EPISODES + 1), ascii=True, unit='episodes', 
-                        disable = True if dp_solution else False):
+                        disable = True if any([dp_solution, naive, pre_trained]) else False):
 
         # Restarting episode - reset episode reward and step number
         episode_reward = 0
@@ -607,7 +607,7 @@ def mdp_sweep(N, sigma_range = [0,2], num_drugs_max=20, episodes=10, num_steps=2
                 #Do it for a random
                 rewards_i, agent_random, policy_random = practice(deepcopy(agent_i), naive=True)
                 mem_i = agent_random.master_memory
-                mem_list_random.append(mem_i, i, j, z)
+                mem_list_random.append([mem_i, i, j, z])
 
     return [mem_list_dp, policy_list_dp, mem_list_random]
     

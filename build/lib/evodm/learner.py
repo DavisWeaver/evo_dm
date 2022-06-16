@@ -558,7 +558,7 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
     return [mem_list, policy_list]
 
 def mdp_sweep(N, sigma_range = [0,2], num_drugs_max=20, episodes=10, num_steps=20,
-              normalize_drugs=True, num_evals=10, replicates = 3):
+              normalize_drugs=False, num_evals=10, replicates = 3):
     '''
     Function to evaluate performance of the MDP optimal for different parameter regimes
         N: int

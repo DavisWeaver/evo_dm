@@ -357,7 +357,10 @@ def compute_optimal_action(agent, policy, step, prev_action = False):
     index = [i for i,j in enumerate(agent.env.state_vector) if j == 1.][0]
 
     if prev_action:
-        action = policy[index][int(agent.env.prev_action)-1] +1
+        if agent.env.TRAIN_INPUT == "state_vector": 
+            action = np.argmax(policy[index]) + 1 
+        else:
+            action = policy[index][int(agent.env.prev_action)-1] +1#plus one because I made the bad decision to force the actions to be 1-indexed once upons a time
     else:
         action = policy[index][step] + 1 #plus one because I made the bad decision to force the actions to be 1,2,3,4 once upon a time
     
@@ -608,10 +611,10 @@ def mdp_sweep(N, sigma_range = [0,2], num_drugs_max=20, episodes=10, num_steps=2
 
     return [mem_list_dp, policy_list_dp, mem_list_random]
     
-def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs= False, 
+def test_generic_policy(policy, agent, 
                         prev_action = False):
     '''
-    Function to test a generic policy for performance in simulated e.coli system
+    Function to test a generic policy for performance
     Args:
         policy: list of lists
             policy matrix specifying deterministic action selection for each state-evolstep. 
@@ -622,23 +625,18 @@ def test_generic_policy(policy, episodes = 100, num_steps = 20, normalize_drugs=
     returns list of lists
         agent memory specifying performance.
     '''
-    hp = hyperparameters()
-    hp.EPISODES = episodes
-    hp.RESET_EVERY = num_steps
-    hp.N = 4
-    hp.NUM_DRUGS = 15
-    hp.NORMALIZE_DRUGS = normalize_drugs
+    hp = agent.hp
+    drugs = agent.env.drugs
     
-    drugs = define_mira_landscapes()
-    agent = DrugSelector(hp = hp, drugs = drugs)
+    clean_agent = DrugSelector(hp = hp, drugs = drugs)
 
-    rewards,agent, policy = practice(deepcopy(agent), dp_solution=True, 
+    rewards, out_agent, policy = practice(deepcopy(clean_agent), dp_solution=True, 
                                      policy = policy, prev_action = prev_action)
 
-    mem = agent.master_memory
+    mem = out_agent.master_memory
     return mem
 
-def sweep_replicate_policy(agent, episodes = 500):
+def sweep_replicate_policy(agent):
     '''
     Function to sweep the policy learned by a given replicate at every episode
     Args:
@@ -647,13 +645,12 @@ def sweep_replicate_policy(agent, episodes = 500):
         normalize_drugs: bool
     '''    
     policies = agent.policies
-    reset = agent.hp.RESET_EVERY
 
     mem_list = []
     for i in range(len(policies)): 
         policy = policies[i][0]
-        mem_i = test_generic_policy(policy, num_steps = reset, 
-                                    prev_action = True, episodes=episodes)
+        mem_i = test_generic_policy(policy, agent = agent,
+                                    prev_action = True)
         mem_list.append(mem_i)
     
     return mem_list

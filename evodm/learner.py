@@ -275,7 +275,7 @@ class DrugSelector:
                 self.env.state_vector[s] = 1
                 action = np.argmax(self.get_qs())
                 policy.append(to_categorical(action, 
-                            num_classes = len(self.env.drugs)))
+                              num_classes = len(self.env.drugs)))
                 
         else:  #if the train input was fitness
             #put together action list

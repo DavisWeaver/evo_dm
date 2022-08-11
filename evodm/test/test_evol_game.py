@@ -101,6 +101,21 @@ def test_traversal4(env_small):
 
     assert len(pd.unique(second_states)) <= 4
 
+def test_traversal5(env_small):
+    env=env_small
+    second_states = []
+    env.state_vector  = np.zeros((2**3,1))
+    env.state_vector[3][0] = 1
+    for i in range(1000):
+        #ppick a random action
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+        second_states.append(np.argmax(env.state_vector))
+        env.state_vector  = np.zeros((2**3,1))
+        env.state_vector[3][0] = 1
+
+    assert np.all([i in (1,2,3,7) for i in second_states])
+
 #Test that the evol_env environment is being initialized properly under a variety of conditions
 def test_init_state(env_init): 
     assert env_init.state_vector[0][0] == 1

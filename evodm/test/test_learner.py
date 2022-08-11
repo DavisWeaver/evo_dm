@@ -101,6 +101,18 @@ def hp_5evols():
     hp_5evols.AVERAGE_OUTCOMES = False
     return hp_5evols
 
+@pytest.fixture
+def hp_small():
+    hp_small = hyperparameters()
+    hp_small.N=3
+    hp_small.NUM_EVOLS = 1
+    hp_small.NUM_DRUGS=5
+    hp_small.TRAIN_INPUT = "fitness"
+    hp_small.MIN_REPLAY_MEMORY_SIZE = 20
+    hp_small.MINIBATCH_SIZE = 10
+    hp_small.RESET_EVERY = 20
+    hp_small.EPISODES = 1000
+    return hp_small
 
 @pytest.fixture
 def ds(hp):
@@ -187,10 +199,40 @@ def ds_replay(hp):
     return ds_replay
 
 @pytest.fixture
+def ds_small(hp_small):
+    ds_replay = DrugSelector(hp= hp_small)
+    x,ds_replay,y = practice(ds_replay, naive = True)
+    return ds_replay
+
+
+@pytest.fixture
+def allow_mat():
+    allow_mat = {
+        0:(0,1,2,4),
+        1:(0,1,3,5),
+        2:(0,2,3,6),
+        3:(1,2,3,7),
+        4:(0,4,5,6),
+        5:(1,4,5,7),
+        6:(2,4,6,7),
+        7:(3,5,6,7)
+    }
+    #000 -> 100 (4), 010 (2), 001 (1), 000 (4)
+    #001 -> 000 (0), 011 (3), 001 (1), 101 (5)
+    #010 -> 000(0), 010 (2), 110 (6), 011 (3)
+    #011 -> 010 (2), 111(7), 001 (1), 011 (3)
+    #100 -> 100 (4), 000 (0), 110 (6), 101(5)
+    #101 -> 101 (5), 111 (7), 100 (4), 001 (1)
+    #110 -> 110 (6), 111 (7), 100 (4), 010 (2)
+    #111 -> 111 (7), 110 (6), 101 (5), 011 (3)
+    return allow_mat
+
+
+@pytest.fixture
 def minibatch(ds_replay):
     minibatch = random.sample(ds_replay.replay_memory, ds_replay.hp.MINIBATCH_SIZE)
     return minibatch
- 
+
 #test get current states --> process by which we grab the current state and next state from the replay memory s
 @pytest.fixture
 def current_states(ds_replay, minibatch):
@@ -223,6 +265,7 @@ def current_states_onetraj(ds_one_traj):
     minibatch = random.sample(ds_one_traj.replay_memory, ds_one_traj.hp.MINIBATCH_SIZE)
     current_states, new_current_states = ds_one_traj.get_current_states(minibatch = minibatch)
     return [current_states, new_current_states]
+
 
 #need input of shape 2,
 def test_current_states_shape(current_states, ds):
@@ -357,6 +400,22 @@ def test_update_weights(ds_replay, batch_enumerated):
     bools = [weights_1[i] != weights_2[i] for i in range(len(weights_1))]
     #test that the weights are being updated
     assert any(bools)
+
+#test to make sure only legal moves are recorded in replay memory
+def test_replay_memory(ds_small, allow_mat):
+    states = [np.argmax(i[3]) for i in ds_small.master_memory]
+    states_ep = [states[i:i + 19] for i in range(0, len(states), 19)]
+    bool_list = []
+    for i in range(len(states_ep)):
+        bool_list_j = []
+        for j in range(len(states_ep[i])):
+            if j != len(states_ep[i])-1: #don't do this step for the last step in the counter
+                bool_j = states_ep[i][j+1] in allow_mat[states_ep[i][j]]
+                bool_list_j.append(bool_j)
+            bool_list.append(bool_list_j)
+
+    
+    assert np.all(bool_list)
 
 
 @pytest.fixture

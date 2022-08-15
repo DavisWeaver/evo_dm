@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.linalg as la
 import scipy.optimize as op
-from scipy.stats.stats import pearsonr
+from scipy.stats import pearsonr
 import copy
 import math
 import itertools

@@ -338,7 +338,7 @@ def compute_optimal_policy(agent, discount_rate = 0.99, num_steps = 20):
     
     policy, V = backwards_induction(env = env, discount_rate= discount_rate, num_steps=num_steps)
 
-    return policy
+    return policy,V
 
 def compute_optimal_action(agent, policy, step, prev_action = False):
     '''
@@ -396,7 +396,7 @@ def practice(agent, naive = False, standard_practice = False,
         reward vector, trained agent including master memory dictating what happened, and learned policy (if applicable)
     '''
     if dp_solution:
-        dp_policy = compute_optimal_policy(agent, discount_rate = discount_rate,
+        dp_policy, V = compute_optimal_policy(agent, discount_rate = discount_rate,
                                           num_steps = agent.hp.RESET_EVERY)
 
     #this is a bit of a hack - we are coopting the code that tests the dp solution to
@@ -498,11 +498,13 @@ def practice(agent, naive = False, standard_practice = False,
         policy = dp_policy
     elif naive:
         policy = []
+        V=[]
     elif pre_trained:
         policy = []
+        V=[]
     else:
         policy = agent.compute_implied_policy(update = False)
-    return reward_list, agent, policy
+    return reward_list, agent, policy, V
 
 def define_mira_landscapes():
     '''
@@ -553,7 +555,7 @@ def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = F
     policy_list = []
 
     for i in iter(discount_range):
-        rewards_i, agent_i, policy_i = practice(deepcopy(agent), dp_solution = True, discount_rate = i)
+        rewards_i, agent_i, policy_i, V = practice(deepcopy(agent), dp_solution = True, discount_rate = i)
         mem_i = agent_i.master_memory
         mem_list.append([mem_i, i])
         policy_list.append([policy_i, i])
@@ -599,13 +601,13 @@ def mdp_sweep(N, sigma_range = [0,2], num_drugs_max=20, episodes=10, num_steps=2
             agent_i = DrugSelector(hp = hp)
             for z in range(replicates):
                 #Solve the MDP
-                rewards_i, agent_dp, policy_dp = practice(deepcopy(agent_i), dp_solution = True)
+                rewards_i, agent_dp, policy_dp, V = practice(deepcopy(agent_i), dp_solution = True)
                 mem_i = agent_dp.master_memory
                 mem_list_dp.append([mem_i, i, j, z])
                 policy_list_dp.append([policy_dp, i, j, z])
 
                 #Do it for a random
-                rewards_i, agent_random, policy_random = practice(deepcopy(agent_i), naive=True)
+                rewards_i, agent_random, policy_random, V = practice(deepcopy(agent_i), naive=True)
                 mem_i = agent_random.master_memory
                 mem_list_random.append([mem_i, i, j, z])
 
@@ -630,7 +632,7 @@ def test_generic_policy(policy, agent,
     
     clean_agent = DrugSelector(hp = hp, drugs = drugs)
 
-    rewards, out_agent, policy = practice(deepcopy(clean_agent), dp_solution=True, 
+    rewards, out_agent, policy, V = practice(deepcopy(clean_agent), dp_solution=True, 
                                      policy = policy, prev_action = prev_action)
 
     mem = out_agent.master_memory
@@ -685,7 +687,7 @@ def policy_sweep(episodes, normalize_drugs = False, num_steps = 20):
         agent = DrugSelector(hp = hp, drugs = drugs)
         for i in iter(all_comb):
             policy_i = convert_two_drug(drug_comb = i, num_steps = num_steps, num_drugs = 15)
-            rewards_i, agent_i, policy = practice(deepcopy(agent), dp_solution = True, policy=policy_i)
+            rewards_i, agent_i, policy, V = practice(deepcopy(agent), dp_solution = True, policy=policy_i)
             mem_i = agent_i.master_memory
             mem_list.append([mem_i, i, j])
         
@@ -809,7 +811,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
 
     if pre_trained and agent != "none":
         agent.master_memory = []
-        rewards, agent, policy = practice(agent, naive=False, pre_trained = pre_trained)
+        rewards, agent, policy,V = practice(agent, naive=False, pre_trained = pre_trained)
         return [rewards, agent, policy]
         
     if mira:
@@ -820,16 +822,16 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     naive_agent = deepcopy(agent) #otherwise it all gets overwritten by the actual agent
     if not average_outcomes:
         dp_agent = deepcopy(agent)
-        dp_rewards, dp_agent, dp_policy = practice(dp_agent, dp_solution = True, 
+        dp_rewards, dp_agent, dp_policy, dp_V = practice(dp_agent, dp_solution = True, 
                                                    discount_rate= hp.DISCOUNT)
 
     #run the agent in the naive case and then in the reg case
-    naive_rewards, naive_agent, naive_policy = practice(naive_agent, naive = True, standard_practice=standard_practice)
-    rewards, agent, policy = practice(agent, naive = False)
+    naive_rewards, naive_agent, naive_policy, V = practice(naive_agent, naive = True, standard_practice=standard_practice)
+    rewards, agent, policy, V = practice(agent, naive = False)
 
 
     return [rewards, naive_rewards, agent, naive_agent, dp_agent, dp_rewards,
-            dp_policy, naive_policy, policy]
+            dp_policy, naive_policy, policy, dp_V]
 
 #rewards = evol_deepmind()
 #naive_rewards= evol_deepmind(naive = True)

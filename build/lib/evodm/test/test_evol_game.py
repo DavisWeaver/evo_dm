@@ -3,6 +3,7 @@ from evodm.evol_game import discretize_state
 import pytest
 import numpy.testing as npt
 import numpy as np
+import pandas as pd
 import random
 
 #start testing that the environment class is working as expected
@@ -33,6 +34,87 @@ def popsize_env():
     for i in range(3):
         test_env.step()
     return test_env 
+
+@pytest.fixture
+def env_small():
+    env_small = evol_env(normalize_drugs=True, N=3, random_start = False, 
+                         num_evols =1, add_noise = False)
+    return env_small
+    #make a list of second states
+
+#function that ensures population is only transitioning by single mutations along the fitness landscape
+def test_traversal(env_small):
+    env=env_small
+    second_states = []
+    for i in range(1000):
+        #ppick a random action
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+        second_states.append(np.argmax(env.state_vector))
+        env.state_vector  = np.zeros((2**3,1))
+        env.state_vector[0][0] = 1
+
+    assert np.all([i in [0,1,2,4] for i in second_states])
+
+def test_traversal2(env_small):
+    env=env_small
+    second_states = []
+    env.state_vector  = np.zeros((2**3,1))
+    env.state_vector[1][0] = 1
+    for i in range(1000):
+        #ppick a random action
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+        second_states.append(np.argmax(env.state_vector))
+        env.state_vector  = np.zeros((2**3,1))
+        env.state_vector[1][0] = 1
+
+    assert np.all([i in [0,1,3,5] for i in second_states])
+
+def test_traversal3(env_small):
+    env=env_small
+    second_states = []
+    env.state_vector  = np.zeros((2**3,1))
+    env.state_vector[7][0] = 1
+    for i in range(1000):
+        #ppick a random action
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+        second_states.append(np.argmax(env.state_vector))
+        env.state_vector  = np.zeros((2**3,1))
+        env.state_vector[7][0] = 1
+
+    assert np.all([i in [7,3,5,6] for i in second_states])
+
+def test_traversal4(env_small):
+    env=env_small
+    second_states = []
+    env.state_vector  = np.zeros((2**3,1))
+    env.state_vector[7][0] = 1
+    for i in range(1000):
+        #ppick a random action
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+        second_states.append(np.argmax(env.state_vector))
+        env.state_vector  = np.zeros((2**3,1))
+        env.state_vector[7][0] = 1
+
+    assert len(pd.unique(second_states)) <= 4
+
+def test_traversal5(env_small):
+    env=env_small
+    second_states = []
+    env.state_vector  = np.zeros((2**3,1))
+    env.state_vector[3][0] = 1
+    for i in range(1000):
+        #ppick a random action
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+        second_states.append(np.argmax(env.state_vector))
+        env.state_vector  = np.zeros((2**3,1))
+        env.state_vector[3][0] = 1
+
+    assert np.all([i in (1,2,3,7) for i in second_states])
 
 #Test that the evol_env environment is being initialized properly under a variety of conditions
 def test_init_state(env_init): 
@@ -103,6 +185,12 @@ def test_discretize_state2():
     states = state_vector.reshape((len(state_vector), 1))
     new_states = discretize_state(states)
     assert all([state_vector[i] == new_states[i] for i in range(len(state_vector))])
+
+def test_discretize_state3():
+    state_vector = np.array([0,0,0.2,0, 0, 0.4, 0, 0.4])
+    states = state_vector.reshape((len(state_vector), 1))
+    new_states = discretize_state(states)
+    assert np.argmax(new_states) in [2,5,7]
 
 #make sure it can go without averaging the evolutionary outcomes.
 def test_run_sim2(env_mature):

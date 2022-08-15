@@ -201,7 +201,7 @@ def ds_replay(hp):
 @pytest.fixture
 def ds_small(hp_small):
     ds_replay = DrugSelector(hp= hp_small)
-    x,ds_replay,y = practice(ds_replay, naive = True)
+    x,ds_replay,y, V = practice(ds_replay, naive = True)
     return ds_replay
 
 
@@ -420,7 +420,7 @@ def test_replay_memory(ds_small, allow_mat):
 
 @pytest.fixture
 def opt_policy(ds_one_traj):
-    opt_policy = compute_optimal_policy(ds_one_traj)
+    opt_policy,x = compute_optimal_policy(ds_one_traj)
     return opt_policy
 
 def test_compute_optimal_policy(opt_policy):
@@ -441,8 +441,8 @@ def test_compute_implied_policy(ds_one_traj):
     assert all(bools)
 
 def test_practice(ds_one_traj_fitness):
-    reward, agent, policy = practice(ds_one_traj_fitness, dp_solution=True)
-    reward, agent, policy = practice(ds_one_traj_fitness, naive=True)
+    reward, agent, policy, V = practice(ds_one_traj_fitness, dp_solution=True)
+    reward, agent, policy, V = practice(ds_one_traj_fitness, naive=True)
 
 @pytest.fixture 
 def ds_mira():
@@ -456,8 +456,8 @@ def ds_mira():
     return ds_mira
 
 def test_mira_practice(ds_mira):
-    reward, agent, policy = practice(ds_mira, dp_solution=True)
-    reward, agent, policy = practice(ds_mira, naive=True)
+    reward, agent, policy, V = practice(ds_mira, dp_solution=True)
+    reward, agent, policy, V = practice(ds_mira, naive=True)
     
 def test_mdp_mira_sweep():
     mem_list = mdp_mira_sweep(num_evals = 10)[0]
@@ -478,8 +478,8 @@ def test_mdp_mira_sweep():
 
 #narrow down on the issue
 def test_compute_optimal_policy(ds_mira):
-    policy = compute_optimal_policy(ds_mira, discount_rate= 0.001)
-    policy2 = compute_optimal_policy(ds_mira, discount_rate = 0.999)
+    policy,x = compute_optimal_policy(ds_mira, discount_rate= 0.001)
+    policy2,x = compute_optimal_policy(ds_mira, discount_rate = 0.999)
     bools_list = []
     for s in range(len(policy2)):
         #this checks for equivalence of policy for 

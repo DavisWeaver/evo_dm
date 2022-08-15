@@ -504,6 +504,7 @@ def practice(agent, naive = False, standard_practice = False,
         V=[]
     else:
         policy = agent.compute_implied_policy(update = False)
+        V=[]
     return reward_list, agent, policy, V
 
 def define_mira_landscapes():

@@ -163,9 +163,9 @@ class DrugSelector:
             #update master memory - for diagnostic purposes only
             if self.env.TRAIN_INPUT == "fitness":
                 #want to save the state vector history somewhere, regardless of what we use for training. 
-                self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor, self.env.state_vector])
+                self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor, self.env.state_vector, self.env.fitness])
             else:
-                self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor])
+                self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor, self.env.fitness]) #also record real fitness instead of sensor fitness
       # Trains main network every step during episode
       #gonna chunk this out so I can actually test it
     def train(self):

@@ -109,7 +109,9 @@ class evol_env:
         ##Define initial fitness
         self.fitness = [np.dot(self.drugs[self.action-1], self.state_vector)]
         if self.NOISE_BOOL:
-            self.fitness = self.add_noise(self.fitness)
+            self.sensor_fitness = self.add_noise(self.fitness)
+        else:
+            self.sensor_fitness = self.fitness
         
         #Define the environment shape
         if self.TRAIN_INPUT == "state_vector":#give the state vector for every evolution
@@ -141,7 +143,9 @@ class evol_env:
                                         action = self.action, 
                                         average_outcomes=self.AVERAGE_OUTCOMES)
         if self.NOISE_BOOL:
-            fitness = self.add_noise(fitness)
+            sensor_fitness = self.add_noise(fitness)
+        else:
+            sensor_fitness = fitness
 
         
         # Again, this is creating a stacked data structure where each time point provides
@@ -151,7 +155,7 @@ class evol_env:
                 self.sensor = [self.state_vector, self.action, self.calc_reward(fitness = fitness), state_vector]
             elif self.TRAIN_INPUT == "fitness":
                 #convert fitness + action into trainable state vector for n and n+1
-                prev_action_cat, action_cat = self.convert_fitness(fitness = fitness)
+                prev_action_cat, action_cat = self.convert_fitness(fitness = sensor_fitness)
                 self.sensor= [np.array(prev_action_cat), 
                                 self.action, self.calc_reward(fitness = fitness), 
                                 np.array(action_cat)] 
@@ -170,6 +174,7 @@ class evol_env:
 
         #update the current fitness vector
         self.fitness = fitness
+        self.sensor_fitness = sensor_fitness
         #update the current state vector
         self.state_vector = state_vector
 
@@ -182,7 +187,7 @@ class evol_env:
     def convert_fitness(self, fitness): 
         #convert to lists
         if self.NUM_EVOLS > 1:
-            prev_fitness = np.ndarray.tolist(self.fitness)
+            prev_fitness = np.ndarray.tolist(self.sensor_fitness)
             fitness = np.ndarray.tolist(fitness)
         else: 
             prev_fitness = self.fitness

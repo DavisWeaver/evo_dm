@@ -313,10 +313,6 @@ def test_replay_noise2(ds_mira_noise):
     last = ds_mira_noise.replay_memory[len(ds_mira_noise.replay_memory)-1][3][15]
     assert ds_mira_noise.env.fitness != last
 
-def test_replay_noise3(ds_mira_noise):
-    last = ds_mira_noise.master_memory[len(ds_mira_noise.master_memory)-1][4]
-    assert ds_mira_noise.env.fitness == last
-
 def test_replay_noise4(ds_mira_noise):
     last = ds_mira_noise.master_memory[len(ds_mira_noise.master_memory)-1][2][3][15]
     assert ds_mira_noise.env.sensor_fitness == last

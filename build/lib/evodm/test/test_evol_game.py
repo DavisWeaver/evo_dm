@@ -42,6 +42,19 @@ def env_small():
     return env_small
     #make a list of second states
 
+@pytest.fixture
+def env_noise():
+    env = evol_env(normalize_drugs=True, random_start = False, num_evols =1, add_noise = True, noise_modifier=5)
+    for i in range(100):
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+    env_noise = env
+    return env_noise
+
+#test to make sure noise is being encoded properly
+def test_noise1(env_noise):
+    assert 2+2==4
+
 #function that ensures population is only transitioning by single mutations along the fitness landscape
 def test_traversal(env_small):
     env=env_small

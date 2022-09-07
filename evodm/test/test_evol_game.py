@@ -45,7 +45,8 @@ def env_small():
 @pytest.fixture
 def env_noise():
     env = evol_env(normalize_drugs=True, random_start = False, num_evols =1,
-                   add_noise = True, noise_modifier=5, train_input="fitness")
+                   add_noise = True, noise_modifier=5, train_input="fitness", 
+                   win_threshold=10000)
     for i in range(100):
         env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
         env.step()

@@ -1,7 +1,6 @@
 import pytest
 from evodm.dpsolve import dp_env, backwards_induction
 from evodm import define_mira_landscapes
-from itertools import chain
 
 @pytest.fixture
 def env():

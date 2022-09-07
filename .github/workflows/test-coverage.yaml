@@ -23,6 +23,6 @@ jobs:
         pip install pytest-cov
     - name: Generate Report 
       run: |
-        pytest --cov .
+        pytest --cov=evodm evodm/test
     - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v2

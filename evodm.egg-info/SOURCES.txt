@@ -3,6 +3,7 @@ setup.py
 evodm/__init__.py
 evodm/dpsolve.py
 evodm/evol_game.py
+evodm/exp.py
 evodm/landscapes.py
 evodm/learner.py
 evodm.egg-info/PKG-INFO
@@ -13,5 +14,6 @@ evodm.egg-info/top_level.txt
 evodm/test/__init__.py
 evodm/test/test_dpsolve.py
 evodm/test/test_evol_game.py
+evodm/test/test_exp.py
 evodm/test/test_landscapes.py
 evodm/test/test_learner.py

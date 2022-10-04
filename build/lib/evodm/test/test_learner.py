@@ -1,6 +1,7 @@
 from evodm import DrugSelector, practice, hyperparameters
 from evodm.learner import compute_optimal_policy, compute_optimal_action, define_mira_landscapes, mdp_mira_sweep
 from evodm.dpsolve import backwards_induction, dp_env
+from evodm.exp import define_mira_landscapes
 import random
 import numpy as np
 import pytest
@@ -17,6 +18,21 @@ def hp():
     hp.EPISODES = 10
     hp.N = 4
     hp.AVERAGE_OUTCOMES = True
+    return hp
+
+@pytest.fixture
+def hp_mira():
+    hp = hyperparameters()
+    hp.TRAIN_INPUT = "fitness"
+    hp.MIN_REPLAY_MEMORY_SIZE = 20
+    hp.MINIBATCH_SIZE = 10
+    hp.RESET_EVERY = 20
+    hp.EPISODES = 10
+    hp.N = 4
+    hp.NUM_DRUGS = 15
+    hp.NOISE=True
+    hp.NOISE_MODIFIER=5
+    hp.AVERAGE_OUTCOMES = False
     return hp
 
 @pytest.fixture
@@ -186,7 +202,6 @@ def ds_default(hp_N5):
     return ds_default
 
 
-
 @pytest.fixture
 def ds_replay(hp):
     ds_replay = DrugSelector(hp = hp)
@@ -199,11 +214,36 @@ def ds_replay(hp):
     return ds_replay
 
 @pytest.fixture
+def ds_mira_noise(hp_mira):
+    drugs = define_mira_landscapes()
+    hp.NUM_DRUGS = 15
+    hp.RESET_EVERY = 20
+    hp.NORMALIZE_DRUGS = False
+    ds = DrugSelector(hp = hp_mira, drugs = drugs)
+    for episode in range(1, ds.hp.EPISODES + 1):
+        for i in range(1, ds.hp.RESET_EVERY):
+            ds.env.action = random.randint(np.min(ds.env.ACTIONS),np.max(ds.env.ACTIONS))
+            ds.env.step()
+            ds.update_replay_memory()
+        ds.env.reset()
+    return ds
+
+@pytest.fixture
 def ds_small(hp_small):
     ds_replay = DrugSelector(hp= hp_small)
     x,ds_replay,y, V = practice(ds_replay, naive = True)
     return ds_replay
 
+@pytest.fixture 
+def ds_mira():
+    hp = hyperparameters()
+    hp.N = 4
+    drugs = define_mira_landscapes()
+    hp.NUM_DRUGS = 15
+    hp.RESET_EVERY = 20
+    hp.NORMALIZE_DRUGS = False
+    ds_mira = DrugSelector(hp = hp, drugs = drugs)
+    return ds_mira
 
 @pytest.fixture
 def allow_mat():
@@ -266,6 +306,21 @@ def current_states_onetraj(ds_one_traj):
     current_states, new_current_states = ds_one_traj.get_current_states(minibatch = minibatch)
     return [current_states, new_current_states]
 
+def test_replay_noise(ds_mira_noise):
+    last = ds_mira_noise.replay_memory[len(ds_mira_noise.replay_memory)-1][3][15]
+    assert ds_mira_noise.env.sensor_fitness == last
+
+def test_replay_noise2(ds_mira_noise):
+    last = ds_mira_noise.replay_memory[len(ds_mira_noise.replay_memory)-1][3][15]
+    assert ds_mira_noise.env.fitness != last
+
+def test_replay_noise4(ds_mira_noise):
+    last = ds_mira_noise.master_memory[len(ds_mira_noise.master_memory)-1][2][3][15]
+    assert ds_mira_noise.env.sensor_fitness == last
+
+def test_replay_noise5(ds_mira_noise):
+    bools= [i[4] >= 0 for i in ds_mira_noise.master_memory]
+    assert np.all(bools)
 
 #need input of shape 2,
 def test_current_states_shape(current_states, ds):
@@ -444,37 +499,10 @@ def test_practice(ds_one_traj_fitness):
     reward, agent, policy, V = practice(ds_one_traj_fitness, dp_solution=True)
     reward, agent, policy, V = practice(ds_one_traj_fitness, naive=True)
 
-@pytest.fixture 
-def ds_mira():
-    hp = hyperparameters()
-    hp.N = 4
-    drugs = define_mira_landscapes()
-    hp.NUM_DRUGS = 15
-    hp.RESET_EVERY = 20
-    hp.NORMALIZE_DRUGS = False
-    ds_mira = DrugSelector(hp = hp, drugs = drugs)
-    return ds_mira
 
 def test_mira_practice(ds_mira):
     reward, agent, policy, V = practice(ds_mira, dp_solution=True)
     reward, agent, policy, V = practice(ds_mira, naive=True)
-    
-def test_mdp_mira_sweep():
-    mem_list = mdp_mira_sweep(num_evals = 10)[0]
-    assert len(mem_list) == 10
-
-#test the policies are actually different based on gamma
-def test_mdp_mira_sweep():
-    policies = mdp_mira_sweep(num_evals = 2, num_steps= 20, episodes = 1)[1]
-    policy = policies[0][0]
-    policy2 = policies[1][0]
-    bools_list = []
-    for s in range(len(policy2)):
-        #this checks for equivalence of policy for 
-        bools = [policy[s][j] != policy2[s][j] for j in range(len(policy2[s]))]
-        bools_list.append(bools)
-    bools_list = list(chain.from_iterable(bools_list))
-    assert any(bools_list)
 
 #narrow down on the issue
 def test_compute_optimal_policy(ds_mira):

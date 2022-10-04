@@ -1,5 +1,6 @@
 from evodm.landscapes import Landscape
 import numpy as np
+import pandas as pd
 from tensorflow.keras.utils import to_categorical
 import math
 # Functions to convert data describing bacterial evolution sim into a format
@@ -262,14 +263,14 @@ class evol_env:
         return reward
     
     def add_noise(self, fitness):
-        noise_param = np.random.normal(loc = 1.0, 
+        noise_param = np.random.normal(loc = 0, 
                                        scale = (0.05 * self.NOISE_MODIFIER))
 
         #muddy the fitness value with noise
         if type(fitness) is not list: 
-            return fitness * noise_param
+            return fitness + noise_param
         else:
-            return [i * noise_param for i in fitness]
+            return [i + noise_param for i in fitness]
 
     def growth_curve(self, new_fitness):
         new_fitness = np.mean(new_fitness)

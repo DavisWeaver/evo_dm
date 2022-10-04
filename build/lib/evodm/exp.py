@@ -1,11 +1,6 @@
-'''
-All experiments go here
-
-Args
-    none
-Returns: pd.dataframe
-'''
 from evodm.learner import *
+import pandas as pd
+import numpy as np
 
 def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   reset_every = 20, min_epsilon = 0.005, 
@@ -121,7 +116,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     if not average_outcomes:
         dp_agent = deepcopy(agent)
         dp_rewards, dp_agent, dp_policy, dp_V = practice(dp_agent, dp_solution = True, 
-                                                   discount_rate= hp.DISCOUNT)
+                                                         discount_rate= hp.DISCOUNT)
 
     #run the agent in the naive case and then in the reg case
     naive_rewards, naive_agent, naive_policy, V = practice(naive_agent, naive = True, standard_practice=standard_practice)
@@ -338,18 +333,30 @@ def convert_two_drug(drug_comb, num_steps = 20, num_drugs = 15, N = 4):
     
     
 
-def signal2noise():
+def signal2noise(noise_vec):
     '''
     somewhat out of place function to evolve a bunch of times at different noise_vec and store the true fitness against the noisy fitness
     Args
        none
     Returns: pd.dataframe
     '''
-
-    noise_vec = [0,2,4,6,8,10,20,30,40,50,100]
-    s_out = []
-    n_out = []
+    drugs = define_mira_landscapes()
+    #set up outer loop
+    df = pd.DataFrame({'fitness':[], 'noisy_fitness':[], 'noise_modifier':[]})
     for i in iter(noise_vec):
-        env=evol_env
-    return 2
+        s_out = [] #set up inner loop
+        n_out = []
+        env=evol_env(N=4, drugs = drugs, noise_modifier = i, win_threshold=10000, num_drugs=15,normalize_drugs=False)
+        for j in range(10000):
+            env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+            env.step()
+            s_out.append(float(env.fitness)) #Extra indexing to escape the data structures
+            n_out.append(env.sensor_fitness)
+        #payoff inner loop
+        df_i = pd.DataFrame({'fitness':s_out, 'noisy_fitness':n_out})
+        df_i = df_i.assign(noise_modifier = i)
+        df = pd.concat([df, df_i])
+    
+    return df
+
 

@@ -1,5 +1,5 @@
 from evodm import DrugSelector, practice, hyperparameters
-from evodm.learner import compute_optimal_policy, compute_optimal_action, define_mira_landscapes, mdp_mira_sweep
+from evodm.learner import compute_optimal_policy, compute_optimal_action
 from evodm.dpsolve import backwards_induction, dp_env
 from evodm.exp import define_mira_landscapes
 import random

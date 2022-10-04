@@ -1,5 +1,6 @@
 from evodm.exp import mdp_mira_sweep
 from itertools import chain
+
 def test_mdp_mira_sweep():
     mem_list = mdp_mira_sweep(num_evals = 10)[0]
     assert len(mem_list) == 10

@@ -1,5 +1,5 @@
 from evodm.learner import *
-from evol_game import define_mira_landscapes
+from evodm.evol_game import define_mira_landscapes
 import pandas as pd
 import numpy as np
 

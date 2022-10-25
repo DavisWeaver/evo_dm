@@ -2,6 +2,9 @@ from evodm.landscapes import Landscape
 import numpy as np
 from tensorflow.keras.utils import to_categorical
 import math
+import random
+import itertools
+import copy
 # Functions to convert data describing bacterial evolution sim into a format
 # that can be used by the learner
 
@@ -426,8 +429,172 @@ def run_sim(evol_steps, N, sigma, state_vector, drugs, action,
     reward = np.squeeze(reward)
     return reward, state_vector
 
+#supposedly faster than numpy.random.choice
+def fast_choice(options, probs):
+    x = random.random()
+    cum = 0
+    for i, p in enumerate(probs):
+        cum += p
+        if x < cum:
+            return options[i]
+    return options[-1]
+
+def define_mira_landscapes():
+    '''
+    Function to define the landscapes described in 
+    Mira PM, Crona K, Greene D, Meza JC, Sturmfels B, Barlow M (2015) 
+    Rational Design of Antibiotic Treatment Plans: A Treatment Strategy for Managing Evolution and Reversing Resistance. 
+    PLoS ONE 10(5): e0122283. https://doi.org/10.1371/journal.pone.0122283
+    '''
+    drugs = []
+    drugs.append([1.851, 2.082, 1.948, 2.434, 2.024, 2.198, 2.033, 0.034, 1.57, 2.165, 0.051, 0.083, 2.186, 2.322, 0.088, 2.821])    #AMP
+    drugs.append([1.778, 1.782, 2.042, 1.752, 1.448, 1.544, 1.184, 0.063, 1.72, 2.008, 1.799, 2.005, 1.557, 2.247, 1.768, 2.047])    #AM
+    drugs.append([2.258, 1.996, 2.151, 2.648, 2.396, 1.846, 2.23, 0.214, 0.234, 0.172, 2.242, 0.093, 2.15, 0.095, 2.64, 0.516])      #CEC
+    drugs.append([0.16, 0.085, 1.936, 2.348, 1.653, 0.138, 2.295, 2.269, 0.185, 0.14, 1.969, 0.203, 0.225, 0.092, 0.119, 2.412])     #CTX
+    drugs.append([0.993, 0.805, 2.069, 2.683, 1.698, 2.01, 2.138, 2.688, 1.106, 1.171, 1.894, 0.681, 1.116, 1.105, 1.103, 2.591])    #ZOX
+    drugs.append([1.748, 1.7, 2.07, 1.938, 2.94, 2.173, 2.918, 3.272, 0.423, 1.578, 1.911, 2.754, 2.024, 1.678, 1.591, 2.923])       #CXM
+    drugs.append([1.092, 0.287, 2.554, 3.042, 2.88, 0.656, 2.732, 0.436, 0.83, 0.54, 3.173, 1.153, 1.407, 0.751, 2.74, 3.227])       #CRO
+    drugs.append([1.435, 1.573, 1.061, 1.457, 1.672, 1.625, 0.073, 0.068, 1.417, 1.351, 1.538, 1.59, 1.377, 1.914, 1.307, 1.728])    #AMC
+    drugs.append([2.134, 2.656, 2.618, 2.688, 2.042, 2.756, 2.924, 0.251, 0.288, 0.576, 1.604, 1.378, 2.63, 2.677, 2.893, 2.563])    #CAZ
+    drugs.append([2.125, 1.922, 2.804, 0.588, 3.291, 2.888, 3.082, 3.508, 3.238, 2.966, 2.883, 0.89, 0.546, 3.181, 3.193, 2.543])    #CTT
+    drugs.append([1.879, 2.533, 0.133, 0.094, 2.456, 2.437, 0.083, 0.094, 2.198, 2.57, 2.308, 2.886, 2.504, 3.002, 2.528, 3.453])    #SAM
+    drugs.append([1.743, 1.662, 1.763, 1.785, 2.018, 2.05, 2.042, 0.218, 1.553, 0.256, 0.165, 0.221, 0.223, 0.239, 1.811, 0.288])    #CPR
+    drugs.append([0.595, 0.245, 2.604, 3.043, 1.761, 1.471, 2.91, 3.096, 0.432, 0.388, 2.651, 1.103, 0.638, 0.986, 0.963, 3.268])    #CPD
+    drugs.append([2.679, 2.906, 2.427, 0.141, 3.038, 3.309, 2.528, 0.143, 2.709, 2.5, 0.172, 0.093, 2.453, 2.739, 0.609, 0.171])     #TZP
+    drugs.append([2.59, 2.572, 2.393, 2.832, 2.44, 2.808, 2.652, 0.611, 2.067, 2.446, 2.957, 2.633, 2.735, 2.863, 2.796, 3.203])     #FEP
+    return drugs
 
 #Function to compute reward for a given simulation step - used by the environment class. 
 #Could have defined this in-line but made it a separate function in case we want to make it 
 #more sophisticated in the future. 
+
+class evol_env_wf:
+    def __init__(self, pop_size, gen_per_step, mutation_rate):
+
+        #save everything
+        self.N= 4
+        self.pop_size = pop_size
+        self.gen_per_step = gen_per_step
+        self.mutation_rate = mutation_rate
+        self.num_drugs = 15
+        self.pop = {}
+        self.sensor = []
+        self.history = []
+
+        self.alphabet = ['0', '1']
+        base_haplotype = ''.join(["0" for i in range(self.N)])
+
+        genotypes = [''.join(seq) for seq in itertools.product("01", repeat=self.N)]
+        drugLandscape = define_mira_landscapes()
+        drugs = []
+
+        self.pop = {}
+        self.fitness = {}
+
+        drugLandscape = define_mira_landscapes()
+
+        self.pop[base_haplotype] = self.pop_size
+
+        for drug in range(self.num_drugs):
+            for i in range(len(genotypes)):
+                self.fitness[genotypes[i]] = drugLandscape[drug][i]
+
+            drugs.append(copy.deepcopy(self.fitness))
+            self.fitness.clear()
+
+        self.drugs = drugs
+
+        #select the first drug
+        self.drug = self.drugs[0]
+
+    
+    def simulate(self):
+        clone_pop = dict(self.pop)
+        self.history.append(clone_pop)
+        for i in range(self.gen_per_step):
+            self.time_step()
+            clone_pop = dict(self.pop)
+            self.history.append(clone_pop)
+
+    def time_step(self):
+        self.mutation_step()
+        self.offspring_step()
+
+    def mutation_step(self):
+        mutation_count = self.get_mutation_count()
+        for i in range(mutation_count):
+            self.mutation_event()
+
+    def get_mutation_count(self):
+        mean = self.mutation_rate * self.pop_size * self.N
+        return np.random.poisson(mean)
+
+
+    """
+    Function that find a random haplotype to mutate and adds that new mutant to the population. Reduces mutated population by 1.
+    """
+    def mutation_event(self):
+        haplotype = self.get_random_haplotype(self.pop, self.pop_size)
+        if self.pop[haplotype] > 1:
+            self.pop[haplotype] -= 1
+            new_haplotype = self.get_mutant(haplotype, self.N, self.alphabet)
+            if new_haplotype in self.pop:
+                self.pop[new_haplotype] += 1
+            else:
+                self.pop[new_haplotype] = 1
+
+    """
+    Chooses a random haplotype in the population that will be returned.
+    """
+    def get_random_haplotype(self):
+        haplotypes = list(self.pop.keys())
+        frequencies = [x/self.pop_size for x in self.pop.values()]
+        total = sum(frequencies)
+        frequencies = [x / total for x in frequencies]
+        return fast_choice(haplotypes, frequencies)
+        #return random.choices(haplotypes, weights=frequencies)[0]
+
+    """
+    Receives the haplotype to be mutated and returns a new haplotype with a mutation with all neighbor mutations equally probable.
+    """
+    def get_mutant(self, haplotype):
+        site = int(random.random()*self.N)
+        possible_mutations = list(self.alphabet)
+        possible_mutations.remove(haplotype[site])
+        mutation = random.choice(possible_mutations)
+        new_haplotype = haplotype[:site] + mutation + haplotype[site+1:]
+        return new_haplotype
+
+
+    #################################################################################################################################
+    """
+    Below is the code responsible for offspring in the Wright-Fisher model, in order of function calls.
+    """
+
+
+    """
+    Gets the number of counts after an offspring step and stores them in the haplotype. If a population is reduced to zero then delete it.
+    """
+    def offspring_step(self):
+        haplotypes = list(self.pop.keys())
+        counts = self.get_offspring_counts(self.pop, self.pop_size, self.drug)
+        for (haplotype, count) in zip(haplotypes, counts):
+            if (count > 0):
+                self.pop[haplotype] = count
+            else:
+                del self.pop[haplotype]
+
+    """
+    Returns the new population count for each haplotype given offspring counts weighted by fitness of haplotype
+    """
+    def get_offspring_counts(self):
+        haplotypes = list(self.pop.keys())
+        frequencies = [self.pop[haplotype]/self.pop_size for haplotype in haplotypes]
+        fitnesses = [self.drug[haplotype] for haplotype in haplotypes]
+        weights = [x * y for x,y in zip(frequencies, self.drug)]
+        total = sum(weights)
+        weights = [x / total for x in weights]
+        return list(np.random.multinomial(self.pop_size, weights))
+
+
 

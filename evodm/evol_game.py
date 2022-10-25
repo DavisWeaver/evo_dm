@@ -469,40 +469,43 @@ def define_mira_landscapes():
 #more sophisticated in the future. 
 
 class evol_env_wf:
-    def __init__(self, N, pop_size, gen_per_step, mutation_rate,
-                 num_drugs, drugs):
+    def __init__(self, pop_size, gen_per_step, mutation_rate):
 
         #save everything
-        self.N= N
+        self.N= 4
         self.pop_size = pop_size
         self.gen_per_step = gen_per_step
         self.mutation_rate = mutation_rate
-        self.num_drugs = num_drugs
-        self.drugs = drugs
+        self.num_drugs = 15
         self.pop = {}
         self.sensor = []
         self.history = []
 
         self.alphabet = ['0', '1']
-        base_haplotype = ''.join(["0" for i in range(N)])
+        base_haplotype = ''.join(["0" for i in range(self.N)])
 
-        genotypes = [''.join(seq) for seq in itertools.product("01", repeat=N)]
+        genotypes = [''.join(seq) for seq in itertools.product("01", repeat=self.N)]
         drugLandscape = define_mira_landscapes()
-        drug_landscape_dicts = []
+        drugs = []
 
-        pop = {}
+        self.pop = {}
         self.fitness = {}
 
+        drugLandscape = define_mira_landscapes()
 
-        pop[base_haplotype] = pop_size
+        self.pop[base_haplotype] = self.pop_size
 
-
-        for drug in range(num_drugs):
+        for drug in range(self.num_drugs):
             for i in range(len(genotypes)):
-                self.fitness[genotypes[i]] = drugLandscape[drug,i]
+                self.fitness[genotypes[i]] = drugLandscape[drug][i]
 
-            drug_landscape_dicts.append(copy.deepcopy(self.fitness))
+            drugs.append(copy.deepcopy(self.fitness))
             self.fitness.clear()
+
+        self.drugs = drugs
+
+        #select the first drug
+        self.drug = self.drugs[0]
 
     
     def simulate(self):
@@ -574,7 +577,7 @@ class evol_env_wf:
     """
     def offspring_step(self):
         haplotypes = list(self.pop.keys())
-        counts = self.get_offspring_counts(self.pop, self.pop_size, self.fitness)
+        counts = self.get_offspring_counts(self.pop, self.pop_size, self.drug)
         for (haplotype, count) in zip(haplotypes, counts):
             if (count > 0):
                 self.pop[haplotype] = count
@@ -587,8 +590,8 @@ class evol_env_wf:
     def get_offspring_counts(self):
         haplotypes = list(self.pop.keys())
         frequencies = [self.pop[haplotype]/self.pop_size for haplotype in haplotypes]
-        fitnesses = [self.fitness[haplotype] for haplotype in haplotypes]
-        weights = [x * y for x,y in zip(frequencies, fitnesses)]
+        fitnesses = [self.drug[haplotype] for haplotype in haplotypes]
+        weights = [x * y for x,y in zip(frequencies, self.drug)]
         total = sum(weights)
         weights = [x / total for x in weights]
         return list(np.random.multinomial(self.pop_size, weights))

@@ -469,7 +469,7 @@ def define_mira_landscapes():
 #more sophisticated in the future. 
 
 class evol_env_wf:
-    def __init__(self, pop_size, gen_per_step, mutation_rate):
+    def __init__(self, train_input = 'fitness',pop_size = 100000, gen_per_step = 20, mutation_rate = 1e-5):
 
         #save everything
         self.N= 4
@@ -490,6 +490,7 @@ class evol_env_wf:
 
         self.pop = {}
         self.fitness = {}
+        self.sensor = []
 
         drugLandscape = define_mira_landscapes()
 
@@ -506,15 +507,34 @@ class evol_env_wf:
 
         #select the first drug
         self.drug = self.drugs[0]
+    
+    def update_sensor(self, pop, fitness):
+        # this is creating a stacked data structure where each time point provides
+        # [current_fitness, current_action, reward, next_fitness]
+        #or [current_state, current_action, reward, next_state]
+        if self.train_input == "state_vector":
+            sv = self.convert_state_vector(sv = pop)
+            sv_prime = self.convert_state_vector(sv = self.pop) #self.pop is 
+        sensor = []
+        return 2
+    
+    def compute_pop_fitness(self):
+        return 2
+    
+    def convert_state_vector(self, sv):
+        return 2
 
     
-    def simulate(self):
-        clone_pop = dict(self.pop)
-        self.history.append(clone_pop)
+    def step(self): #just renaming this to match with the base evol_env format
+        clone_pop_old = dict(self.pop)
+        self.history.append(clone_pop_old)
         for i in range(self.gen_per_step):
             self.time_step()
             clone_pop = dict(self.pop)
             self.history.append(clone_pop)
+
+        fitness = self.compute_pop_fitness() 
+        self.update_sensor(pop=clone_pop_old, fitness =fitness)
 
     def time_step(self):
         self.mutation_step()
@@ -534,10 +554,10 @@ class evol_env_wf:
     Function that find a random haplotype to mutate and adds that new mutant to the population. Reduces mutated population by 1.
     """
     def mutation_event(self):
-        haplotype = self.get_random_haplotype(self.pop, self.pop_size)
+        haplotype = self.get_random_haplotype()
         if self.pop[haplotype] > 1:
             self.pop[haplotype] -= 1
-            new_haplotype = self.get_mutant(haplotype, self.N, self.alphabet)
+            new_haplotype = self.get_mutant(haplotype)
             if new_haplotype in self.pop:
                 self.pop[new_haplotype] += 1
             else:
@@ -577,7 +597,7 @@ class evol_env_wf:
     """
     def offspring_step(self):
         haplotypes = list(self.pop.keys())
-        counts = self.get_offspring_counts(self.pop, self.pop_size, self.drug)
+        counts = self.get_offspring_counts()
         for (haplotype, count) in zip(haplotypes, counts):
             if (count > 0):
                 self.pop[haplotype] = count
@@ -591,7 +611,7 @@ class evol_env_wf:
         haplotypes = list(self.pop.keys())
         frequencies = [self.pop[haplotype]/self.pop_size for haplotype in haplotypes]
         fitnesses = [self.drug[haplotype] for haplotype in haplotypes]
-        weights = [x * y for x,y in zip(frequencies, self.drug)]
+        weights = [x * y for x,y in zip(frequencies, fitnesses)]
         total = sum(weights)
         weights = [x / total for x in weights]
         return list(np.random.multinomial(self.pop_size, weights))

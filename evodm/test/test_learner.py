@@ -1,5 +1,4 @@
-from evodm import DrugSelector, practice, hyperparameters
-from evodm.learner import compute_optimal_policy, compute_optimal_action
+from evodm.learner import compute_optimal_policy, compute_optimal_action, DrugSelector, practice, hyperparameters
 from evodm.dpsolve import backwards_induction, dp_env
 from evodm.exp import define_mira_landscapes
 import random
@@ -521,3 +520,14 @@ def test_compute_optimal_policy(ds_mira):
 def mira_env():
     drugs = define_mira_landscapes()
     return dp_env(N=4, num_drugs = 15, drugs = drugs, sigma = 0.5)
+
+@pytest.fixture
+def hp_wf():
+    hp_wf = hyperparameters()
+    hp_wf.WF = True
+    return hp_wf
+
+def test_init_wf(hp_wf):
+    agent = DrugSelector(hp = hp_wf)
+    
+

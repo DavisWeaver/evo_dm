@@ -467,15 +467,16 @@ def define_mira_landscapes():
 #more sophisticated in the future. 
 
 class evol_env_wf:
-    def __init__(self, train_input = 'fitness',pop_size = 100000, gen_per_step = 20, mutation_rate = 1e-5):
+    def __init__(self, train_input = 'fitness',pop_size = 100000, 
+                 gen_per_step = 20, mutation_rate = 1e-5):
 
         #save everything
         self.N= 4
         self.pop_size = pop_size
         self.gen_per_step = gen_per_step
         self.mutation_rate = mutation_rate
-        self.train_input = train_input
-        self.num_drugs = 15
+        self.TRAIN_INPUT = train_input
+        self.NUM_DRUGS = 15
         self.pop = {}
         self.sensor = []
         self.history = []
@@ -511,7 +512,16 @@ class evol_env_wf:
         self.step_number = 1 #step_number is analagous to step in the original simulations
         self.time_step_number=0 #time step number is the generation count
         self.fit = self.compute_pop_fitness(drug = self.drug, sv = self.pop)
-    
+
+        #Stuff to make things not break
+        if self.TRAIN_INPUT == "state_vector":#give the state vector for every evolution
+            self.ENVIRONMENT_SHAPE = (len(self.state_vector),1)
+        elif self.TRAIN_INPUT == "fitness":
+            self.ENVIRONMENT_SHAPE = (self.NUM_DRUGS + 1,)
+
+        self.ACTIONS = [i for i in range(self.NUM_DRUGS)] # action space -no plus one because it was really really dumb 
+
+  
     def update_sensor(self, pop):
         # this is creating a stacked data structure where each time point provides
         # [current_fitness, current_action, reward, next_fitness]

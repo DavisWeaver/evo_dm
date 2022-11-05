@@ -326,8 +326,6 @@ class evol_env:
         if self.NOISE_BOOL: 
             self.fitness = self.add_noise(self.fitness)
 
-        
-
 #helper function for generating the od_dist
 def s_solve(y):
         x = -math.log(1/y - 1)
@@ -469,31 +467,32 @@ def define_mira_landscapes():
 #more sophisticated in the future. 
 
 class evol_env_wf:
-    def __init__(self, pop_size, gen_per_step, mutation_rate):
+    def __init__(self, train_input = 'fitness',pop_size = 100000, 
+                 gen_per_step = 20, mutation_rate = 1e-5):
 
         #save everything
         self.N= 4
         self.pop_size = pop_size
         self.gen_per_step = gen_per_step
         self.mutation_rate = mutation_rate
-        self.num_drugs = 15
+        self.TRAIN_INPUT = train_input
+        self.NUM_DRUGS = 15
         self.pop = {}
         self.sensor = []
         self.history = []
+        self.fitness = {}
 
         self.alphabet = ['0', '1']
-        base_haplotype = ''.join(["0" for i in range(self.N)])
+        self.base_haplotype = ''.join(["0" for i in range(self.N)])
 
         genotypes = [''.join(seq) for seq in itertools.product("01", repeat=self.N)]
         drugLandscape = define_mira_landscapes()
         drugs = []
 
-        self.pop = {}
-        self.fitness = {}
-
+        
         drugLandscape = define_mira_landscapes()
 
-        self.pop[base_haplotype] = self.pop_size
+        self.pop[self.base_haplotype] = self.pop_size
 
         for drug in range(self.num_drugs):
             for i in range(len(genotypes)):
@@ -504,17 +503,89 @@ class evol_env_wf:
 
         self.drugs = drugs
 
+        self.action = 0
         #select the first drug
-        self.drug = self.drugs[0]
+        self.drug = self.drugs[self.action]
+        self.prev_drug=self.drug
 
+        #housekeeping
+        self.step_number = 1 #step_number is analagous to step in the original simulations
+        self.time_step_number=0 #time step number is the generation count
+        self.fit = self.compute_pop_fitness(drug = self.drug, sv = self.pop)
+
+        #Stuff to make things not break
+        if self.TRAIN_INPUT == "state_vector":#give the state vector for every evolution
+            self.ENVIRONMENT_SHAPE = (len(self.state_vector),1)
+        elif self.TRAIN_INPUT == "fitness":
+            self.ENVIRONMENT_SHAPE = (self.NUM_DRUGS + 1,)
+
+        self.ACTIONS = [i for i in range(self.NUM_DRUGS)] # action space -no plus one because it was really really dumb 
+
+  
+    def update_sensor(self, pop):
+        # this is creating a stacked data structure where each time point provides
+        # [current_fitness, current_action, reward, next_fitness]
+        #or [current_state, current_action, reward, next_state]
+        if self.train_input == "state_vector":
+            sv = self.convert_state_vector(sv = pop)
+            sv_prime = self.convert_state_vector(sv = self.pop) #self.pop is 
+        elif self.train_input == 'fitness':
+            sv = self.compute_pop_fitness(sv = pop, drug = self.prev_drug)
+            sv_prime = self.compute_pop_fitness(sv=self.pop, drug = self.drug)
+        
+        fit = self.compute_pop_fitness(sv=self.pop, drug = self.drug)
+        self.sensor = [sv, self.action, 1-fit, sv_prime] #reward is just 1-fitness
     
-    def simulate(self):
-        clone_pop = dict(self.pop)
-        self.history.append(clone_pop)
+    def compute_pop_fitness(self, drug, sv):
+        x = [(sv[i] * drug[i]) / self.pop_size for i in sv.keys()]
+        fit = np.sum(x)
+        return fit
+    
+    def convert_state_vector(self, sv):
+        new_sv = np.zeros((self.N**2,1))
+        keys = list(sv.keys())
+        for i in range(len(sv)):
+            #convert binary key to numeric
+            state = int(keys[i], 2)
+            val = sv[keys[i]] / self.pop_size
+            new_sv[state][0] = val
+
+        return new_sv
+    def update_drug(self, drug_num):
+        #Always use this method to update the drug
+        self.prev_drug = self.drug
+        self.drug = self.drugs[drug_num]
+        
+    def step(self): #just renaming this to match with the base evol_env format
+
+        pop_old = dict(self.pop)
+        if self.time_step_number == 0:
+            self.history.append(pop_old)
         for i in range(self.gen_per_step):
             self.time_step()
             clone_pop = dict(self.pop)
             self.history.append(clone_pop)
+            self.time_step_number += 1
+        #prep for next 'step'
+        self.time_step_number=1
+        self.step_number +=1
+        
+        self.update_sensor(pop=pop_old)
+        
+    #reset the environment after an 'episode'
+    def reset(self):
+        self.time_step_number = 0
+        self.step_number = 1
+        self.pop = {}
+        self.sensor = []
+        self.pop[self.base_haplotype] = self.pop_size
+
+        #reset drug stuff to baseline as well
+        self.action = 0
+        #select the first drug
+        self.drug = self.drugs[self.action]
+
+        
 
     def time_step(self):
         self.mutation_step()
@@ -534,10 +605,10 @@ class evol_env_wf:
     Function that find a random haplotype to mutate and adds that new mutant to the population. Reduces mutated population by 1.
     """
     def mutation_event(self):
-        haplotype = self.get_random_haplotype(self.pop, self.pop_size)
+        haplotype = self.get_random_haplotype()
         if self.pop[haplotype] > 1:
             self.pop[haplotype] -= 1
-            new_haplotype = self.get_mutant(haplotype, self.N, self.alphabet)
+            new_haplotype = self.get_mutant(haplotype)
             if new_haplotype in self.pop:
                 self.pop[new_haplotype] += 1
             else:
@@ -577,7 +648,7 @@ class evol_env_wf:
     """
     def offspring_step(self):
         haplotypes = list(self.pop.keys())
-        counts = self.get_offspring_counts(self.pop, self.pop_size, self.drug)
+        counts = self.get_offspring_counts()
         for (haplotype, count) in zip(haplotypes, counts):
             if (count > 0):
                 self.pop[haplotype] = count
@@ -591,7 +662,7 @@ class evol_env_wf:
         haplotypes = list(self.pop.keys())
         frequencies = [self.pop[haplotype]/self.pop_size for haplotype in haplotypes]
         fitnesses = [self.drug[haplotype] for haplotype in haplotypes]
-        weights = [x * y for x,y in zip(frequencies, self.drug)]
+        weights = [x * y for x,y in zip(frequencies, fitnesses)]
         total = sum(weights)
         weights = [x / total for x in weights]
         return list(np.random.multinomial(self.pop_size, weights))

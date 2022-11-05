@@ -1,4 +1,4 @@
-from evodm.exp import mdp_mira_sweep
+from evodm.exp import mdp_mira_sweep, evol_deepmind
 from itertools import chain
 
 def test_mdp_mira_sweep():
@@ -17,3 +17,7 @@ def test_mdp_mira_sweep():
         bools_list.append(bools)
     bools_list = list(chain.from_iterable(bools_list))
     assert any(bools_list)
+
+def test_evol_deepmind_wf():
+    #just make sure it runs quietly at a minimum
+    out = evol_deepmind(wf = True, train_input='state_vector', episodes=10)

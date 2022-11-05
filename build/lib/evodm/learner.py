@@ -6,7 +6,7 @@ from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 from collections import deque
-from evodm.evol_game import evol_env
+from evodm.evol_game import evol_env, evol_env_wf
 from evodm.dpsolve import backwards_induction, dp_env
 import random
 import numpy as np 
@@ -61,6 +61,11 @@ class hyperparameters:
         self.NUM_DRUGS = 4
         self.MIRA = True
         self.TOTAL_RESISTANCE = False
+        #wright-fisher controls
+        self.WF = False
+        self.POP_SIZE = 10000
+        self.GEN_PER_STEP = 500
+        self.MUTATION_RATE = 1e-5
 
         #define victory conditions for player and pop
         self.PLAYER_WCUTOFF = 0.001
@@ -96,23 +101,30 @@ class DrugSelector:
         '''
         # hp stands for hyperparameters
         self.hp = hp
-        # initialize the environment
-        self.env = evol_env(num_evols=self.hp.NUM_EVOLS, N = self.hp.N,
-                            train_input= self.hp.TRAIN_INPUT, 
-                            random_start=self.hp.RANDOM_START, 
-                            num_drugs = self.hp.NUM_DRUGS, 
-                            sigma=self.hp.SIGMA,
-                            normalize_drugs = self.hp.NORMALIZE_DRUGS, 
-                            win_threshold= self.hp.WIN_THRESHOLD, 
-                            player_wcutoff = self.hp.PLAYER_WCUTOFF, 
-                            pop_wcutoff= self.hp.POP_WCUTOFF,
-                            win_reward=self.hp.WIN_REWARD, 
-                            drugs = drugs, 
-                            add_noise = self.hp.NOISE, 
-                            noise_modifier= self.hp.NOISE_MODIFIER,
-                            average_outcomes=self.hp.AVERAGE_OUTCOMES, 
-                            starting_genotype = self.hp.STARTING_GENOTYPE,
-                            total_resistance= self.hp.TOTAL_RESISTANCE)
+        if self.hp.WF:
+            self.env = evol_env_wf(self, train_input = self.hp.TRAIN_INPUT,
+                                   pop_size = self.hp.POP_SIZE, 
+                                   gen_per_step = self.hp.GEN_PER_STEP, 
+                                   mutation_rate = self.hp.MUTATION_RATE
+                                  )
+        else:
+            # initialize the environment
+            self.env = evol_env(num_evols=self.hp.NUM_EVOLS, N = self.hp.N,
+                                train_input= self.hp.TRAIN_INPUT, 
+                                random_start=self.hp.RANDOM_START, 
+                                num_drugs = self.hp.NUM_DRUGS, 
+                                sigma=self.hp.SIGMA,
+                                normalize_drugs = self.hp.NORMALIZE_DRUGS, 
+                                win_threshold= self.hp.WIN_THRESHOLD, 
+                                player_wcutoff = self.hp.PLAYER_WCUTOFF, 
+                                pop_wcutoff= self.hp.POP_WCUTOFF,
+                                win_reward=self.hp.WIN_REWARD, 
+                                drugs = drugs, 
+                                add_noise = self.hp.NOISE, 
+                                noise_modifier= self.hp.NOISE_MODIFIER,
+                                average_outcomes=self.hp.AVERAGE_OUTCOMES, 
+                                starting_genotype = self.hp.STARTING_GENOTYPE,
+                                total_resistance= self.hp.TOTAL_RESISTANCE)
 
         # main model  # gets trained every step
         self.model = self.create_model()
@@ -369,7 +381,7 @@ def compute_optimal_action(agent, policy, step, prev_action = False):
 #'main' function that iterates through simulations to train the agent
 def practice(agent, naive = False, standard_practice = False, 
              dp_solution = False, pre_trained = False, discount_rate = 0.99,
-             policy = "none", prev_action = False):
+             policy = "none", prev_action = False, wf = False):
     '''
     Function that iterates through simulations to train the agent. Also used to test general drug cycling policies as controls for evodm 
     ...
@@ -395,9 +407,9 @@ def practice(agent, naive = False, standard_practice = False,
     Returns rewards, agent, policy 
         reward vector, trained agent including master memory dictating what happened, and learned policy (if applicable)
     '''
-    if dp_solution:
+    if dp_solution and not wf:
         dp_policy, V = compute_optimal_policy(agent, discount_rate = discount_rate,
-                                          num_steps = agent.hp.RESET_EVERY)
+                                              num_steps = agent.hp.RESET_EVERY)
 
     #this is a bit of a hack - we are coopting the code that tests the dp solution to
     #  test user-provided policies that use the same format
@@ -425,7 +437,7 @@ def practice(agent, naive = False, standard_practice = False,
             if np.random.random() > agent.hp.epsilon:
                 # Get action from Q table
                 if naive:
-                    if standard_practice:
+                    if standard_practice and not wf:
                         #Only change the action if fitness is above 0.9
                         if np.mean(agent.env.fitness) > 0.9:
                             avail_actions = [action for action in agent.env.ACTIONS if action != agent.env.action] #grab all actions except the one currently selected
@@ -435,10 +447,13 @@ def practice(agent, naive = False, standard_practice = False,
                 elif dp_solution:
                     agent.env.action = compute_optimal_action(agent, dp_policy, step = i, prev_action=prev_action)
                 else:
-                    agent.env.action = np.argmax(agent.get_qs()) + 1 #plus one because of the stupid fucking indexing system
+                    if wf:
+                        agent.env.action = np.argmax(agent.get_qs())
+                    else:
+                        agent.env.action = np.argmax(agent.get_qs()) + 1 #plus one because of the stupid fucking indexing system
             else:
                 # Get random action
-                if standard_practice:
+                if standard_practice and not wf:
                         #Only change the action if fitness is above 0.9
                     if np.mean(agent.env.fitness) > 0.9:
                         avail_actions = [action for action in agent.env.ACTIONS if action != agent.env.action] #grab all actions except the one currently selected

@@ -468,7 +468,6 @@ def test_replay_memory(ds_small, allow_mat):
                 bool_list_j.append(bool_j)
             bool_list.append(bool_list_j)
 
-    
     assert np.all(bool_list)
 
 
@@ -525,9 +524,43 @@ def mira_env():
 def hp_wf():
     hp_wf = hyperparameters()
     hp_wf.WF = True
+    hp_wf.EPISODES=5
+    hp_wf.MIN_REPLAY_MEMORY_SIZE=50
     return hp_wf
 
 def test_init_wf(hp_wf):
+    #don't need to assert anything - just make sure it doesn't break when we do this
     agent = DrugSelector(hp = hp_wf)
     
+def test_train_wf(hp_wf):
+    #again asserting things is for losers - no errors = cool
+    agent = DrugSelector(hp = hp_wf)
+    for i in range(1000):
+        agent.env.action = random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS))
+        agent.env.step()
+        agent.update_replay_memory()
+    
+    agent.train()
 
+def test_practice_wf(hp_wf):
+    agent = DrugSelector(hp=hp_wf)
+    reward_list, agent, policy, v = practice(
+        agent = agent, wf = True
+    )
+
+def test_practice_wf_fit(hp_wf):
+    hp_wf.train_input = 'fitness'
+    agent = DrugSelector(hp=hp_wf)
+    reward_list, agent, policy, v = practice(
+        agent = agent, wf = True
+    )
+
+def test_compute_implied_policy_wf(hp_wf):
+    agent = DrugSelector(hp = hp_wf)
+    for i in range(1000):
+        agent.env.action = random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS))
+        agent.env.step()
+        agent.update_replay_memory()
+    
+    agent.train()
+    agent.compute_implied_policy(update = True)

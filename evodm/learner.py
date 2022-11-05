@@ -78,7 +78,6 @@ class hyperparameters:
         # stats settings - 
         self.AGGREGATE_STATS_EVERY = 1  #agg every episode
 
-
 # This is the class for the learning agent
 class DrugSelector:
     
@@ -102,11 +101,10 @@ class DrugSelector:
         # hp stands for hyperparameters
         self.hp = hp
         if self.hp.WF:
-            self.env = evol_env_wf(self, train_input = self.hp.TRAIN_INPUT,
+            self.env = evol_env_wf(train_input = self.hp.TRAIN_INPUT,
                                    pop_size = self.hp.POP_SIZE, 
                                    gen_per_step = self.hp.GEN_PER_STEP, 
-                                   mutation_rate = self.hp.MUTATION_RATE
-                                  )
+                                   mutation_rate = self.hp.MUTATION_RATE)
         else:
             # initialize the environment
             self.env = evol_env(num_evols=self.hp.NUM_EVOLS, N = self.hp.N,

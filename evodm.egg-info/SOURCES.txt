@@ -6,7 +6,6 @@ evodm/evol_game.py
 evodm/exp.py
 evodm/landscapes.py
 evodm/learner.py
-evodm/wFish_Landscapes_mira.py
 evodm.egg-info/PKG-INFO
 evodm.egg-info/SOURCES.txt
 evodm.egg-info/dependency_links.txt

@@ -526,6 +526,7 @@ def hp_wf():
     hp_wf.WF = True
     hp_wf.EPISODES=5
     hp_wf.MIN_REPLAY_MEMORY_SIZE=50
+    hp_wf.MINIBATCH_SIZE = 25
     return hp_wf
 
 def test_init_wf(hp_wf):

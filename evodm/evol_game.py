@@ -509,6 +509,7 @@ class evol_env_wf:
         #select the first drug
         self.drug = self.drugs[self.action]
         self.prev_drug=self.drug
+        self.prev_action = 0.0
 
         #housekeeping
         self.step_number = 1 #step_number is analagous to step in the original simulations
@@ -535,8 +536,9 @@ class evol_env_wf:
             sv = self.convert_state_vector(sv = pop)
             sv_prime = self.convert_state_vector(sv = self.pop) #self.pop is 
         elif self.TRAIN_INPUT == 'fitness':
-            sv = self.compute_pop_fitness(sv = pop, drug = self.prev_drug)
-            sv_prime = self.compute_pop_fitness(sv=self.pop, drug = self.drug)
+            fit = self.compute_pop_fitness(sv = pop, drug = self.prev_drug)
+            fit_prime = self.compute_pop_fitness(sv=self.pop, drug = self.drug)
+            sv, sv_prime = self.convert_fitness(fitness = fit,fitness_prime = fit_prime)
         
         fit = self.compute_pop_fitness(sv=self.pop, drug = self.drug)
         self.sensor = [sv, self.action, 1-fit, sv_prime] #reward is just 1-fitness
@@ -559,7 +561,7 @@ class evol_env_wf:
     def update_drug(self, drug_num):
         #Always use this method to update the drug
         self.prev_drug = self.drug
-        self.drug = self.drugs[drug_num]
+        self.drug = self.drugs[self.action]
         
     def step(self): #just renaming this to match with the base evol_env format
         #update action number
@@ -577,8 +579,8 @@ class evol_env_wf:
         #prep for next 'step'
         self.time_step_number=1
         self.step_number +=1
-        
         self.update_sensor(pop=pop_old)
+        self.prev_action = float(self.action)
         
     #reset the environment after an 'episode'
     def reset(self):
@@ -645,6 +647,22 @@ class evol_env_wf:
         mutation = random.choice(possible_mutations)
         new_haplotype = haplotype[:site] + mutation + haplotype[site+1:]
         return new_haplotype
+
+    def convert_fitness(self, fitness, fitness_prime): 
+        #convert to lists
+        
+        prev_action_cat = to_categorical(self.prev_action-1, num_classes = len(self.ACTIONS)) #-1 because of the dumb python indexing system
+        prev_action_cat = np.ndarray.tolist(prev_action_cat) #convert to list
+
+        #This checks if fitness is a list (will occur if num_evols > 1)
+        
+        prev_action_cat.append(fitness)
+
+        action_cat = to_categorical(self.action-1, num_classes = len(self.ACTIONS))
+        action_cat = np.ndarray.tolist(action_cat)
+        action_cat.append(fitness)
+
+        return np.asarray(prev_action_cat), np.asarray(action_cat)
 
 
     #################################################################################################################################

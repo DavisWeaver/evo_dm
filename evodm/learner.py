@@ -296,7 +296,10 @@ class DrugSelector:
                 state_vector[s] = 1
                 a_out = []
                 for a in range(len(a_list)):
-                    fit = np.dot(self.env.drugs[a], state_vector)[0] #compute fitness for given state_vector, drug combination
+                    if self.hp.WF:
+                        fit = np.dot(list(self.env.drugs[a].values()), state_vector)[0] #compute fitness for given state_vector, drug combination
+                    else:
+                        fit = np.dot(self.env.drugs[a], state_vector)[0] #compute fitness for given state_vector, drug combination
                     a_vec = deepcopy(a_list)[a]
                     #append fitness to one-hot encoded action to mimic how the data are fed into the model
                     a_vec.append(fit)

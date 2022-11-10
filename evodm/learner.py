@@ -432,8 +432,11 @@ def practice(agent, naive = False, standard_practice = False,
         if pre_trained:
             agent.hp.epsilon = 0
 
-        for i in range(agent.hp.RESET_EVERY):
-
+        for i in range(agent.hp.RESET_EVERY+1):
+            if i==0:
+                agent.env.step()
+                continue
+            i=i-1 #correct for the drastic step we had to take up above ^
             # This part stays mostly the same, the change is to query a model for Q values
             if np.random.random() > agent.hp.epsilon:
                 # Get action from Q table
@@ -468,16 +471,13 @@ def practice(agent, naive = False, standard_practice = False,
             #we don't save anything - it stays in the class
             agent.env.step()
 
-            # Transform new continous state to new discrete state and count reward
-            # can't do this after just 1 step because there won't be anything in the sensor
-            if i != 0:
-                reward = agent.env.sensor[2]
-                episode_reward += reward
+            reward = agent.env.sensor[2]
+            episode_reward += reward
 
-                # Every step we update replay memory and train main network - only train if we are doing a not naive run
-                agent.update_replay_memory()
-                if not any([dp_solution, naive, pre_trained]):
-                    agent.train()
+            # Every step we update replay memory and train main network - only train if we are doing a not naive run
+            agent.update_replay_memory()
+            if not any([dp_solution, naive, pre_trained]):
+                agent.train()
             
             if agent.env.done: # break if either of the victory conditions are met
                 break #check out calc_reward in the evol_env class for how this is defined

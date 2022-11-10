@@ -20,4 +20,14 @@ def test_mdp_mira_sweep():
 
 def test_evol_deepmind_wf():
     #just make sure it runs quietly at a minimum
-    out = evol_deepmind(wf = True, train_input='state_vector', episodes=5)
+    out = evol_deepmind(wf = True, train_input='fitness', episodes=5, 
+                        num_drugs = 15, N=4, mira=True, 
+                        normalize_drugs=False)
+                
+
+def test_evol_deepmind_wf2():
+    #just make sure it runs quietly at a minimum
+    out = evol_deepmind(wf = True, train_input='fitness', episodes=5, 
+                        num_drugs = 15, N=4, mira=True, 
+                        normalize_drugs=False)
+    

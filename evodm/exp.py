@@ -112,7 +112,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
 
     if pre_trained and agent != "none":
         agent.master_memory = []
-        rewards, agent, policy,V = practice(agent, naive=False, pre_trained = pre_trained)
+        rewards, agent, policy,V = practice(agent, naive=False, wf = wf, pre_trained = pre_trained)
         return [rewards, agent, policy]
         
     if mira:
@@ -127,8 +127,10 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                                                          discount_rate= hp.DISCOUNT)
 
     #run the agent in the naive case and then in the reg case
-    naive_rewards, naive_agent, naive_policy, V = practice(naive_agent, naive = True, standard_practice=standard_practice)
-    rewards, agent, policy, V = practice(agent, naive = False)
+    naive_rewards, naive_agent, naive_policy, V = practice(naive_agent, naive = True, 
+                                                           standard_practice=standard_practice, 
+                                                           wf=wf)
+    rewards, agent, policy, V = practice(agent, naive = False, wf = wf)
     if wf:
         dp_policy=[]
         dp_agent=[]

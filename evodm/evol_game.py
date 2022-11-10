@@ -325,6 +325,7 @@ class evol_env:
         self.fitness = [np.dot(self.drugs[self.action-1], self.state_vector)]
         if self.NOISE_BOOL: 
             self.fitness = self.add_noise(self.fitness)
+        self.sensor = []
 
 #helper function for generating the od_dist
 def s_solve(y):

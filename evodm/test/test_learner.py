@@ -388,6 +388,8 @@ def test_predict_qs_onetraj(current_states_onetraj, ds_one_traj):
     assert all(bools)
 
 def test_get_qs(ds_replay):
+    for i in range(3):
+        ds_replay.env.step()
     qs = ds_replay.get_qs()
     assert len(qs) == len(ds_replay.env.ACTIONS)
 
@@ -400,6 +402,8 @@ def test_get_qs2(ds_replay,ds):
     for i in range(3):
         ds.env.step()
         ds.update_replay_memory()
+        ds_replay.env.step()
+        ds_replay.update_replay_memory()
     
     #just make sure q changes based on the inputs
     qs1 = ds.get_qs()
@@ -428,11 +432,15 @@ def test_get_qs2_state(ds_state):
 
 
 def test_get_qs3(ds_N5):
+    for i in range(3):
+        ds_N5.env.step()
     qs = ds_N5.get_qs()
     assert len(qs) == len(ds_N5.env.ACTIONS)
     
 #now with full default hyperparameters
 def test_get_qs4(ds_default):
+    for i in range(3):
+        ds_default.env.step()
     qs = ds_default.get_qs()
     assert len(qs) == len(ds_default.env.ACTIONS)
 

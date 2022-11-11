@@ -483,7 +483,7 @@ class evol_env_wf:
         self.pop = {}
         self.sensor = []
         self.history = []
-        self.fitness = {}
+        self.fit = {}
 
         self.alphabet = ['0', '1']
         self.base_haplotype = ''.join(["0" for i in range(self.N)])
@@ -499,10 +499,10 @@ class evol_env_wf:
 
         for drug in range(self.NUM_DRUGS):
             for i in range(len(genotypes)):
-                self.fitness[genotypes[i]] = drugLandscape[drug][i]
+                self.fit[genotypes[i]] = drugLandscape[drug][i]
 
-            drugs.append(copy.deepcopy(self.fitness))
-            self.fitness.clear()
+            drugs.append(copy.deepcopy(self.fit))
+            self.fit.clear()
 
         self.drugs = drugs
 
@@ -515,7 +515,7 @@ class evol_env_wf:
         #housekeeping
         self.step_number = 1 #step_number is analagous to step in the original simulations
         self.time_step_number=0 #time step number is the generation count
-        self.fit = self.compute_pop_fitness(drug = self.drug, sv = self.pop)
+        self.fitness = self.compute_pop_fitness(drug = self.drug, sv = self.pop)
         self.state_vector = self.convert_state_vector(sv = self.pop)
         #Stuff to make things not break
         if self.TRAIN_INPUT == "state_vector":#give the state vector for every evolution
@@ -582,6 +582,7 @@ class evol_env_wf:
         self.step_number +=1
         self.update_sensor(pop=pop_old)
         self.prev_action = float(self.action)
+        self.fitness = self.compute_pop_fitness(drug = self.drug, sv = self.pop)
         
     #reset the environment after an 'episode'
     def reset(self):
@@ -597,6 +598,7 @@ class evol_env_wf:
         self.action = 0
         #select the first drug
         self.drug = self.drugs[self.action]
+        self.fitness = self.compute_pop_fitness(drug = self.drug, sv = self.pop)
 
         
 

@@ -478,7 +478,6 @@ def test_replay_memory(ds_small, allow_mat):
 
     assert np.all(bool_list)
 
-
 @pytest.fixture
 def opt_policy(ds_one_traj):
     opt_policy,x = compute_optimal_policy(ds_one_traj)
@@ -522,6 +521,8 @@ def test_compute_optimal_policy(ds_mira):
     bools_list = list(chain.from_iterable(bools_list))
     
     assert any(bools_list)
+
+
 
 @pytest.fixture
 def mira_env():
@@ -573,3 +574,14 @@ def test_compute_implied_policy_wf(hp_wf):
     
     agent.train()
     agent.compute_implied_policy(update = True)
+
+def test_memory_wf(hp_wf):
+    agent = DrugSelector(hp = hp_wf)
+    hp_wf.train_input = 'fitness'
+    for i in range(1000):
+        agent.env.action = random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS))
+        agent.env.step()
+        agent.update_replay_memory()
+
+    agent.master_memory[0][4]
+    

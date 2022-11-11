@@ -545,7 +545,7 @@ def test_init_wf(hp_wf):
 def test_train_wf(hp_wf):
     #again asserting things is for losers - no errors = cool
     agent = DrugSelector(hp = hp_wf)
-    for i in range(1000):
+    for i in range(100):
         agent.env.action = random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS))
         agent.env.step()
         agent.update_replay_memory()
@@ -576,12 +576,22 @@ def test_compute_implied_policy_wf(hp_wf):
     agent.compute_implied_policy(update = True)
 
 def test_memory_wf(hp_wf):
+    hp_wf.TRAIN_INPUT = 'fitness'
     agent = DrugSelector(hp = hp_wf)
-    hp_wf.train_input = 'fitness'
-    for i in range(1000):
+    for i in range(10):
         agent.env.action = random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS))
         agent.env.step()
         agent.update_replay_memory()
 
-    agent.master_memory[0][4]
+    assert isinstance(agent.master_memory[0][4], float)
+
+def test_memory_wf(hp_wf):
+    hp_wf.TRAIN_INPUT = 'state_vector'
+    agent = DrugSelector(hp = hp_wf)
+    for i in range(10):
+        agent.env.action = random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS))
+        agent.env.step()
+        agent.update_replay_memory()
+
+    assert isinstance(agent.master_memory[0][3], float)
     

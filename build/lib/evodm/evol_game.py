@@ -582,6 +582,7 @@ class evol_env_wf:
         self.step_number +=1
         self.update_sensor(pop=pop_old)
         self.prev_action = float(self.action)
+        self.state_vector = self.convert_state_vector(sv = self.pop)
         self.fitness = self.compute_pop_fitness(drug = self.drug, sv = self.pop)
         
     #reset the environment after an 'episode'
@@ -598,6 +599,7 @@ class evol_env_wf:
         self.action = 0
         #select the first drug
         self.drug = self.drugs[self.action]
+        self.state_vector = self.convert_state_vector(sv = self.pop)
         self.fitness = self.compute_pop_fitness(drug = self.drug, sv = self.pop)
 
         

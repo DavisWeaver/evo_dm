@@ -1,5 +1,5 @@
 from evodm import evol_env, generate_landscapes, define_drugs, normalize_landscapes, run_sim
-from evodm.evol_game import discretize_state
+from evodm.evol_game import discretize_state, define_mira_landscapes, evol_env_wf
 import pytest
 import numpy.testing as npt
 import numpy as np
@@ -250,6 +250,39 @@ def test_normalize_landscapes(example_landscapes):
 #need a test to make sure we can compute total resistance across a panel. 
 def test_total_resistance(env_total_resistance):
     assert isinstance(env_total_resistance.fitness - 1, np.float)
+
+@pytest.fixture
+def mira_env():
+    drugs = define_mira_landscapes()
+    mira_env = evol_env(N=4, drugs = drugs, num_drugs = 15, normalize_drugs=False,
+                   train_input = 'fitness')
+    for i in range(100):
+        mira_env.action = random.randint(np.min(mira_env.ACTIONS),np.max(mira_env.ACTIONS))
+        mira_env.step()
+    mira_env.action = 5 #6 instead of 5 because in my infinite wisdom I used different indexing systems for these
+    mira_env.step()
+    mira_env.step()
+    return mira_env
+
+@pytest.fixture
+def mira_env_wf(): 
+    mira_env_wf = evol_env_wf()
+    for i in range(100):
+        mira_env_wf.action = random.randint(np.min(mira_env_wf.ACTIONS),np.max(mira_env_wf.ACTIONS))
+        mira_env_wf.step()
+    
+    mira_env_wf.action = 5
+    mira_env_wf.step()
+    mira_env_wf.step()
+    return mira_env_wf
+
+def test_convert_fitness_wf(mira_env_wf, mira_env):
+    assert len(mira_env_wf.sensor[0]) == len(mira_env.sensor[0])
+
+def test_convert_fitness_wf2(mira_env_wf, mira_env):
+    bools = [mira_env_wf.sensor[0][i] == mira_env.sensor[0][i] for i in range(15)]
+    assert all(bools)
+
 
 
 

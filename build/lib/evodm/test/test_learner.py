@@ -388,6 +388,8 @@ def test_predict_qs_onetraj(current_states_onetraj, ds_one_traj):
     assert all(bools)
 
 def test_get_qs(ds_replay):
+    for i in range(3):
+        ds_replay.env.step()
     qs = ds_replay.get_qs()
     assert len(qs) == len(ds_replay.env.ACTIONS)
 
@@ -400,6 +402,8 @@ def test_get_qs2(ds_replay,ds):
     for i in range(3):
         ds.env.step()
         ds.update_replay_memory()
+        ds_replay.env.step()
+        ds_replay.update_replay_memory()
     
     #just make sure q changes based on the inputs
     qs1 = ds.get_qs()
@@ -428,11 +432,15 @@ def test_get_qs2_state(ds_state):
 
 
 def test_get_qs3(ds_N5):
+    for i in range(3):
+        ds_N5.env.step()
     qs = ds_N5.get_qs()
     assert len(qs) == len(ds_N5.env.ACTIONS)
     
 #now with full default hyperparameters
 def test_get_qs4(ds_default):
+    for i in range(3):
+        ds_default.env.step()
     qs = ds_default.get_qs()
     assert len(qs) == len(ds_default.env.ACTIONS)
 
@@ -468,7 +476,6 @@ def test_replay_memory(ds_small, allow_mat):
                 bool_list_j.append(bool_j)
             bool_list.append(bool_list_j)
 
-    
     assert np.all(bool_list)
 
 
@@ -525,9 +532,44 @@ def mira_env():
 def hp_wf():
     hp_wf = hyperparameters()
     hp_wf.WF = True
+    hp_wf.EPISODES=5
+    hp_wf.MIN_REPLAY_MEMORY_SIZE=50
+    hp_wf.MINIBATCH_SIZE = 25
     return hp_wf
 
 def test_init_wf(hp_wf):
+    #don't need to assert anything - just make sure it doesn't break when we do this
     agent = DrugSelector(hp = hp_wf)
     
+def test_train_wf(hp_wf):
+    #again asserting things is for losers - no errors = cool
+    agent = DrugSelector(hp = hp_wf)
+    for i in range(1000):
+        agent.env.action = random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS))
+        agent.env.step()
+        agent.update_replay_memory()
+    
+    agent.train()
 
+def test_practice_wf(hp_wf):
+    agent = DrugSelector(hp=hp_wf)
+    reward_list, agent, policy, v = practice(
+        agent = agent, wf = True
+    )
+
+def test_practice_wf_fit(hp_wf):
+    hp_wf.train_input = 'fitness'
+    agent = DrugSelector(hp=hp_wf)
+    reward_list, agent, policy, v = practice(
+        agent = agent, wf = True
+    )
+
+def test_compute_implied_policy_wf(hp_wf):
+    agent = DrugSelector(hp = hp_wf)
+    for i in range(1000):
+        agent.env.action = random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS))
+        agent.env.step()
+        agent.update_replay_memory()
+    
+    agent.train()
+    agent.compute_implied_policy(update = True)

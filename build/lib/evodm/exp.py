@@ -12,7 +12,10 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   win_reward = 0, standard_practice = False, drugs = "none",
                   average_outcomes = False, mira = False, gamma = 0.99,
                   learning_rate = 0.0001, minibatch_size = 60, 
-                  pre_trained = False, 
+                  pre_trained = False, wf = False,
+                  mutation_rate = 1e-5,
+                  gen_per_step = 500,
+                  pop_size = 10000,
                   agent = "none",
                   update_target_every = 310, total_resistance = False, 
                   starting_genotype = 0):
@@ -98,6 +101,10 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     hp.UPDATE_TARGET_EVERY = int(update_target_every)
     hp.TOTAL_RESISTANCE = total_resistance
     hp.STARTING_GENOTYPE = int(starting_genotype)
+    hp.WF = wf
+    hp.MUTATION_RATE = mutation_rate
+    hp.GEN_PER_STEP = gen_per_step
+    hp.POP_SIZE = pop_size
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes
@@ -105,7 +112,7 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
 
     if pre_trained and agent != "none":
         agent.master_memory = []
-        rewards, agent, policy,V = practice(agent, naive=False, pre_trained = pre_trained)
+        rewards, agent, policy,V = practice(agent, naive=False, wf = wf, pre_trained = pre_trained)
         return [rewards, agent, policy]
         
     if mira:
@@ -114,15 +121,21 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
     #initialize agent, including the updated hyperparameters
     agent = DrugSelector(hp = hp, drugs = drugs)
     naive_agent = deepcopy(agent) #otherwise it all gets overwritten by the actual agent
-    if not average_outcomes:
+    if not any([average_outcomes, wf]):
         dp_agent = deepcopy(agent)
         dp_rewards, dp_agent, dp_policy, dp_V = practice(dp_agent, dp_solution = True, 
                                                          discount_rate= hp.DISCOUNT)
 
     #run the agent in the naive case and then in the reg case
-    naive_rewards, naive_agent, naive_policy, V = practice(naive_agent, naive = True, standard_practice=standard_practice)
-    rewards, agent, policy, V = practice(agent, naive = False)
-
+    naive_rewards, naive_agent, naive_policy, V = practice(naive_agent, naive = True, 
+                                                           standard_practice=standard_practice, 
+                                                           wf=wf)
+    rewards, agent, policy, V = practice(agent, naive = False, wf = wf)
+    if wf:
+        dp_policy=[]
+        dp_agent=[]
+        dp_V = []
+        dp_rewards=[]
 
     return [rewards, naive_rewards, agent, naive_agent, dp_agent, dp_rewards,
             dp_policy, naive_policy, policy, dp_V]

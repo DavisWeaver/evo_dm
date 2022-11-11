@@ -325,6 +325,7 @@ class evol_env:
         self.fitness = [np.dot(self.drugs[self.action-1], self.state_vector)]
         if self.NOISE_BOOL: 
             self.fitness = self.add_noise(self.fitness)
+        self.sensor = []
 
 #helper function for generating the od_dist
 def s_solve(y):
@@ -467,10 +468,12 @@ def define_mira_landscapes():
 #more sophisticated in the future. 
 
 class evol_env_wf:
-    def __init__(self, train_input = 'fitness',pop_size = 100000, 
+    def __init__(self, train_input = 'fitness', pop_size = 100000, 
                  gen_per_step = 20, mutation_rate = 1e-5):
 
+        self.update_target_counter= 0 
         #save everything
+        self.episode_number = 1
         self.N= 4
         self.pop_size = pop_size
         self.gen_per_step = gen_per_step
@@ -494,7 +497,7 @@ class evol_env_wf:
 
         self.pop[self.base_haplotype] = self.pop_size
 
-        for drug in range(self.num_drugs):
+        for drug in range(self.NUM_DRUGS):
             for i in range(len(genotypes)):
                 self.fitness[genotypes[i]] = drugLandscape[drug][i]
 
@@ -507,31 +510,36 @@ class evol_env_wf:
         #select the first drug
         self.drug = self.drugs[self.action]
         self.prev_drug=self.drug
+        self.prev_action = 0.0
 
         #housekeeping
         self.step_number = 1 #step_number is analagous to step in the original simulations
         self.time_step_number=0 #time step number is the generation count
         self.fit = self.compute_pop_fitness(drug = self.drug, sv = self.pop)
-
+        self.state_vector = self.convert_state_vector(sv = self.pop)
         #Stuff to make things not break
         if self.TRAIN_INPUT == "state_vector":#give the state vector for every evolution
             self.ENVIRONMENT_SHAPE = (len(self.state_vector),1)
         elif self.TRAIN_INPUT == "fitness":
             self.ENVIRONMENT_SHAPE = (self.NUM_DRUGS + 1,)
 
+        self.action_number = 0
+
         self.ACTIONS = [i for i in range(self.NUM_DRUGS)] # action space -no plus one because it was really really dumb 
 
+        self.done = False
   
     def update_sensor(self, pop):
         # this is creating a stacked data structure where each time point provides
         # [current_fitness, current_action, reward, next_fitness]
         #or [current_state, current_action, reward, next_state]
-        if self.train_input == "state_vector":
+        if self.TRAIN_INPUT == "state_vector":
             sv = self.convert_state_vector(sv = pop)
             sv_prime = self.convert_state_vector(sv = self.pop) #self.pop is 
-        elif self.train_input == 'fitness':
-            sv = self.compute_pop_fitness(sv = pop, drug = self.prev_drug)
-            sv_prime = self.compute_pop_fitness(sv=self.pop, drug = self.drug)
+        elif self.TRAIN_INPUT == 'fitness':
+            fit = self.compute_pop_fitness(sv = pop, drug = self.prev_drug)
+            fit_prime = self.compute_pop_fitness(sv=self.pop, drug = self.drug)
+            sv, sv_prime = self.convert_fitness(fitness = fit,fitness_prime = fit_prime)
         
         fit = self.compute_pop_fitness(sv=self.pop, drug = self.drug)
         self.sensor = [sv, self.action, 1-fit, sv_prime] #reward is just 1-fitness
@@ -554,9 +562,12 @@ class evol_env_wf:
     def update_drug(self, drug_num):
         #Always use this method to update the drug
         self.prev_drug = self.drug
-        self.drug = self.drugs[drug_num]
+        self.drug = self.drugs[self.action]
         
     def step(self): #just renaming this to match with the base evol_env format
+        #update action number
+        self.update_target_counter += 1
+        self.action_number += 1
 
         pop_old = dict(self.pop)
         if self.time_step_number == 0:
@@ -569,11 +580,13 @@ class evol_env_wf:
         #prep for next 'step'
         self.time_step_number=1
         self.step_number +=1
-        
         self.update_sensor(pop=pop_old)
+        self.prev_action = float(self.action)
         
     #reset the environment after an 'episode'
     def reset(self):
+        self.episode_number +=1 
+        self.action_number = 0
         self.time_step_number = 0
         self.step_number = 1
         self.pop = {}
@@ -635,6 +648,22 @@ class evol_env_wf:
         mutation = random.choice(possible_mutations)
         new_haplotype = haplotype[:site] + mutation + haplotype[site+1:]
         return new_haplotype
+
+    def convert_fitness(self, fitness, fitness_prime): 
+        #convert to lists
+        
+        prev_action_cat = to_categorical(self.prev_action-1, num_classes = len(self.ACTIONS)) #-1 because of the dumb python indexing system
+        prev_action_cat = np.ndarray.tolist(prev_action_cat) #convert to list
+
+        #This checks if fitness is a list (will occur if num_evols > 1)
+        
+        prev_action_cat.append(fitness)
+
+        action_cat = to_categorical(self.action-1, num_classes = len(self.ACTIONS))
+        action_cat = np.ndarray.tolist(action_cat)
+        action_cat.append(fitness)
+
+        return np.asarray(prev_action_cat), np.asarray(action_cat)
 
 
     #################################################################################################################################

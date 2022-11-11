@@ -1,4 +1,4 @@
-from evodm.exp import mdp_mira_sweep
+from evodm.exp import mdp_mira_sweep, evol_deepmind
 from itertools import chain
 
 def test_mdp_mira_sweep():
@@ -17,3 +17,17 @@ def test_mdp_mira_sweep():
         bools_list.append(bools)
     bools_list = list(chain.from_iterable(bools_list))
     assert any(bools_list)
+
+def test_evol_deepmind_wf():
+    #just make sure it runs quietly at a minimum
+    out = evol_deepmind(wf = True, train_input='fitness', episodes=5, 
+                        num_drugs = 15, N=4, mira=True, 
+                        normalize_drugs=False)
+                
+
+def test_evol_deepmind_wf2():
+    #just make sure it runs quietly at a minimum
+    out = evol_deepmind(wf = True, train_input='fitness', episodes=5, 
+                        num_drugs = 15, N=4, mira=True, 
+                        normalize_drugs=False)
+    

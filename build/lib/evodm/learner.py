@@ -78,7 +78,6 @@ class hyperparameters:
         # stats settings - 
         self.AGGREGATE_STATS_EVERY = 1  #agg every episode
 
-
 # This is the class for the learning agent
 class DrugSelector:
     
@@ -102,11 +101,10 @@ class DrugSelector:
         # hp stands for hyperparameters
         self.hp = hp
         if self.hp.WF:
-            self.env = evol_env_wf(self, train_input = self.hp.TRAIN_INPUT,
+            self.env = evol_env_wf(train_input = self.hp.TRAIN_INPUT,
                                    pop_size = self.hp.POP_SIZE, 
                                    gen_per_step = self.hp.GEN_PER_STEP, 
-                                   mutation_rate = self.hp.MUTATION_RATE
-                                  )
+                                   mutation_rate = self.hp.MUTATION_RATE)
         else:
             # initialize the environment
             self.env = evol_env(num_evols=self.hp.NUM_EVOLS, N = self.hp.N,
@@ -298,7 +296,10 @@ class DrugSelector:
                 state_vector[s] = 1
                 a_out = []
                 for a in range(len(a_list)):
-                    fit = np.dot(self.env.drugs[a], state_vector)[0] #compute fitness for given state_vector, drug combination
+                    if self.hp.WF:
+                        fit = np.dot(list(self.env.drugs[a].values()), state_vector)[0] #compute fitness for given state_vector, drug combination
+                    else:
+                        fit = np.dot(self.env.drugs[a], state_vector)[0] #compute fitness for given state_vector, drug combination
                     a_vec = deepcopy(a_list)[a]
                     #append fitness to one-hot encoded action to mimic how the data are fed into the model
                     a_vec.append(fit)
@@ -431,8 +432,11 @@ def practice(agent, naive = False, standard_practice = False,
         if pre_trained:
             agent.hp.epsilon = 0
 
-        for i in range(agent.hp.RESET_EVERY):
-
+        for i in range(agent.hp.RESET_EVERY+1):
+            if i==0:
+                agent.env.step()
+                continue
+            i=i-1 #correct for the drastic step we had to take up above ^
             # This part stays mostly the same, the change is to query a model for Q values
             if np.random.random() > agent.hp.epsilon:
                 # Get action from Q table
@@ -467,16 +471,13 @@ def practice(agent, naive = False, standard_practice = False,
             #we don't save anything - it stays in the class
             agent.env.step()
 
-            # Transform new continous state to new discrete state and count reward
-            # can't do this after just 1 step because there won't be anything in the sensor
-            if i != 0:
-                reward = agent.env.sensor[2]
-                episode_reward += reward
+            reward = agent.env.sensor[2]
+            episode_reward += reward
 
-                # Every step we update replay memory and train main network - only train if we are doing a not naive run
-                agent.update_replay_memory()
-                if not any([dp_solution, naive, pre_trained]):
-                    agent.train()
+            # Every step we update replay memory and train main network - only train if we are doing a not naive run
+            agent.update_replay_memory()
+            if not any([dp_solution, naive, pre_trained]):
+                agent.train()
             
             if agent.env.done: # break if either of the victory conditions are met
                 break #check out calc_reward in the evol_env class for how this is defined

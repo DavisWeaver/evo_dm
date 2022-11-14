@@ -5,6 +5,8 @@ from scipy.stats import pearsonr
 import copy
 import math
 import itertools
+import networkx as nx
+import matplotlib.pyplot as plt
 
 class Landscape:
     """
@@ -544,3 +546,207 @@ class Landscape:
 
     def __str__(self):
         return self.__repr__()
+        
+    def graph(self, p=None, verbose=False):
+        """
+        Plots a graph representation of this landscape on the current matplotlib figure.
+        If p is set to a vector of occupation probabilities, the edges in the graph will
+        have thickness proportional to the transition probability between nodes.
+        """
+        TM = self.get_TM()
+        # Transpose TM because draw functions uses transposed version.
+        TM = list(map(list, zip(*TM)))
+
+        # Figure out the length of the bit sequences we're working with
+        N = self.N
+
+        # Generate all possible N-bit sequences
+        genotypes = ["".join(seq) for seq in itertools.product("01", repeat=N)]
+
+        # Turn the unique bit sequences array into a list of tuples with the bit sequence and its corresponding fitness
+        # The tuples can still be used as nodes because they are hashable objects
+        genotypes = [(genotypes[i], self.ls[i]) for i in range(len(genotypes))]
+
+        # Build hierarchical structure for N-bit sequences that differ by 1 bit at each level
+        hierarchy = [[] for i in range(N+1)]
+        for g in genotypes: hierarchy[g[0].count("1")].append(g)
+
+        # Add all unique bit sequences as nodes to the graph
+        G = nx.DiGraph()
+        G.add_nodes_from(genotypes)
+
+        # Add edges with appropriate weights depending on the TM
+        sf = 5 # edge thickness scale factor
+        for i in range(len(TM)):
+            for j in range(len(TM[i])):
+                if TM[i][j] != 0 and i != j:
+                    G.add_edge(genotypes[i], genotypes[j], weight=sf*TM[i][j])
+
+        # Find the local & global min/max
+        maxes = []
+        mins = []
+        for node in G:
+            if len(G[node]) == 0:
+                maxes.append(node)
+            elif len(G[node]) == N:
+                mins.append(node)
+
+        # Determine which is global min/max
+        # this algorithm can probably be simplified because...
+        # global max will always have fitness = 1, and global min fitness = 0
+        globalmax = 0
+        globalmin = 0
+        for i in range(1,len(maxes)):
+            if maxes[i][1] > maxes[globalmax][1]:
+                globalmax = i
+        for i in range(1,len(mins)):
+            if mins[i][1] < mins[globalmin][1]:
+                globalmin = i
+        globalmax = maxes[globalmax]
+        globalmin = mins[globalmin]
+        maxes.remove(globalmax)
+        mins.remove(globalmin)
+
+        # Create label dict for max/min nodes
+        labels = {}
+        labels[globalmax] = "+"
+        labels[globalmin] = "-"
+        for n in maxes:
+            labels[n] = "+"
+        for n in mins:
+            labels[n] = "-"
+
+        # Store all the edge weights in a list so they can be used to control the edge widths when drawn
+        edges = G.edges()
+        weights = [G[u][v]['weight'] for u,v in edges]
+
+        # just using spring layout to generate an initial dummy pos dict
+        pos = nx.spring_layout(G)
+
+        # calculate how many entires in the longest row, it will be N choose N/2
+        # because the longest row will have every possible way of putting N/2 1s (or 0s) into N bits
+        maxLen = math.factorial(N) / math.factorial(N//2)**2
+
+        # Position the nodes in a layered hierarchical structure by modifying pos dict
+        y = 1
+        for row in hierarchy:
+            if len(row) > maxLen: maxLen = len(row)
+        for i in range(len(hierarchy)):
+            levelLen = len(hierarchy[i])
+            # algorithm for horizontal spacing.. may not be 100% correct?
+            offset = (maxLen - levelLen + 1) / maxLen
+            xs = np.linspace(0 + offset / 2, 1 - offset / 2, levelLen)
+            for j in range(len(hierarchy[i])):
+                pos[hierarchy[i][j]] = (xs[j], y)
+            y -= 1 / N
+
+        # Print node structure to console
+        if verbose:
+            for i in range(len(hierarchy)):
+                print(("Row {}: " + str([h[0] for h in hierarchy[i]]).strip('[]')).format(i+1))
+            print()
+
+        node_size = 500
+        if p is not None:
+            node_size = [75 + 1000*val for val in p]
+
+        # Draw the graph
+        plt.axis('off')
+        node_vals = [g[1] for g in G.nodes()]
+        nx.draw(G, pos, with_labels=False, width=weights, linewidths=1, cmap=plt.get_cmap('Greys'), node_color=node_vals,node_size=node_size)
+        nx.draw_networkx_labels(G,pos,labels,font_size=16,font_color='red') # labels for min/max nodes
+        ax = plt.gca()
+        ax.collections[0].set_edgecolor("#000000")
+
+    
+    def graphTraj(self, TM, N, p=None, verbose=False):
+        """
+        Modified version of graph(). Depreciated.
+        """
+        #TM = self.get_TM()
+        # Transpose TM because draw functions uses transposed version.
+        TM = list(map(list, zip(*TM)))
+
+        # Figure out the length of the bit sequences we're working with
+        N = N
+
+        # Generate all possible N-bit sequences
+        genotypes = ["".join(seq) for seq in itertools.product("01", repeat=N)]
+
+        # Turn the unique bit sequences array into a list of tuples with the bit sequence and its corresponding fitness
+        # The tuples can still be used as nodes because they are hashable objects
+        genotypes = [(genotypes[i], self.ls[i]) for i in range(len(genotypes))]
+
+        # Build hierarchical structure for N-bit sequences that differ by 1 bit at each level
+        hierarchy = [[] for i in range(N+1)]
+        for g in genotypes: hierarchy[g[0].count("1")].append(g)
+
+        # Add all unique bit sequences as nodes to the graph
+        G = nx.DiGraph()
+        G.add_nodes_from(genotypes)
+
+        # Add edges with appropriate weights depending on the TM
+        sf = 5 # edge thickness scale factor
+        for i in range(len(TM)):
+            for j in range(len(TM[i])):
+                if TM[i][j] != 0 and i != j:
+                    G.add_edge(genotypes[i], genotypes[j], weight=sf*TM[i][j])
+
+        # Find the local & global min/max
+        maxes = []
+        mins = []
+        for node in G:
+            if len(G[node]) == 0:
+                maxes.append(node)
+            elif len(G[node]) == N:
+                mins.append(node)
+
+        # Create label dict for max/min nodes
+        labels = {}
+        for n in maxes:
+            labels[n] = " "
+        for n in mins:
+            labels[n] = " "
+
+        # Store all the edge weights in a list so they can be used to control the edge widths when drawn
+        edges = G.edges()
+        weights = [G[u][v]['weight'] for u,v in edges]
+
+        # just using spring layout to generate an initial dummy pos dict
+        pos = nx.spring_layout(G)
+
+        # calculate how many entires in the longest row, it will be N choose N/2
+        # because the longest row will have every possible way of putting N/2 1s (or 0s) into N bits
+        maxLen = math.factorial(N) / math.factorial(N//2)**2
+
+        # Position the nodes in a layered hierarchical structure by modifying pos dict
+        y = 1
+        for row in hierarchy:
+            if len(row) > maxLen: maxLen = len(row)
+        for i in range(len(hierarchy)):
+            levelLen = len(hierarchy[i])
+            # algorithm for horizontal spacing.. may not be 100% correct?
+            offset = (maxLen - levelLen + 1) / maxLen
+            xs = np.linspace(0 + offset / 2, 1 - offset / 2, levelLen)
+            for j in range(len(hierarchy[i])):
+                pos[hierarchy[i][j]] = (xs[j], y)
+            y -= 1 / N
+
+        # Print node structure to console
+        if verbose:
+            for i in range(len(hierarchy)):
+                print(("Row {}: " + str([h[0] for h in hierarchy[i]]).strip('[]')).format(i+1))
+            print()
+
+        node_size = 500
+        if p is not None:
+            node_size = [10 + 1000*val for val in p]
+
+        # Draw the graph
+        plt.axis('off')
+        node_vals = [g[1] for g in G.nodes()]
+        nx.draw(G, pos, with_labels=False, width=weights, linewidths=1, cmap=plt.get_cmap('Greys'), node_color=node_vals,node_size=node_size)
+        nx.draw_networkx_labels(G,pos,labels,font_size=16,font_color='red') # labels for min/max nodes
+        ax = plt.gca()
+        ax.collections[0].set_edgecolor("#000000")
+

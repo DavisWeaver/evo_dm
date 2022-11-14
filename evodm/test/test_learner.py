@@ -594,4 +594,26 @@ def test_memory_wf(hp_wf):
         agent.update_replay_memory()
 
     assert isinstance(agent.master_memory[0][3], float)
-    
+
+def test_memory_wf2(hp_wf):
+    hp_wf.TRAIN_INPUT = 'fitness'
+    agent = DrugSelector(hp = hp_wf)
+    for i in range(10):
+        agent.env.update_drug(random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS)))
+        agent.env.step()
+        agent.update_replay_memory()
+
+    fit = agent.env.compute_pop_fitness(drug = agent.env.drug, sv = agent.env.pop)
+
+    assert fit == agent.env.fitness
+
+def test_memory_wf3(hp_wf):
+    hp_wf.TRAIN_INPUT = 'fitness'
+    agent = DrugSelector(hp = hp_wf)
+    for i in range(10):
+        agent.env.update_drug(random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS)))
+        agent.env.step()
+        agent.update_replay_memory()
+
+    fit = agent.env.compute_pop_fitness(drug = agent.env.drug, sv = agent.env.pop)
+    assert fit == agent.replay_memory[len(agent.replay_memory) - 1][3][15]

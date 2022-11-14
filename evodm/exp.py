@@ -2,6 +2,7 @@ from evodm.learner import *
 from evodm.evol_game import define_mira_landscapes
 import pandas as pd
 import numpy as np
+from itertools import combinations
 
 def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
                   reset_every = 20, min_epsilon = 0.005, 

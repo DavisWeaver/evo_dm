@@ -153,24 +153,23 @@ class evol_env:
         
         # Again, this is creating a stacked data structure where each time point provides
         # [current_fitness, current_action, reward, next_fitness]
-        if self.action_number != 1:
-            if self.TRAIN_INPUT == "state_vector":
-                self.sensor = [self.state_vector, self.action, self.calc_reward(fitness = fitness), state_vector]
-            elif self.TRAIN_INPUT == "fitness":
-                #convert fitness + action into trainable state vector for n and n+1
-                prev_action_cat, action_cat = self.convert_fitness(fitness = sensor_fitness)
-                self.sensor= [np.array(prev_action_cat), 
-                                self.action, self.calc_reward(fitness = fitness), 
-                                np.array(action_cat)] 
-            elif self.TRAIN_INPUT == "pop_size":
-                ##Here we interpolate between the previous fitness and the next fitness
-                pop_size = self.growth_curve(new_fitness = fitness)
-                self.sensor= [self.pop_size, self.action, self.calc_reward(fitness = fitness), pop_size]
-                 #update pop size vector
-                self.pop_size = pop_size    
-            else:
-                print("please specify either state_vector, fitness, or pop_size for train_input when initializing the environment")
-                return
+        if self.TRAIN_INPUT == "state_vector":
+            self.sensor = [self.state_vector, self.action, self.calc_reward(fitness = fitness), state_vector]
+        elif self.TRAIN_INPUT == "fitness":
+            #convert fitness + action into trainable state vector for n and n+1
+            prev_action_cat, action_cat = self.convert_fitness(fitness = sensor_fitness)
+            self.sensor= [np.array(prev_action_cat), 
+                            self.action, self.calc_reward(fitness = fitness), 
+                            np.array(action_cat)] 
+        elif self.TRAIN_INPUT == "pop_size":
+            ##Here we interpolate between the previous fitness and the next fitness
+            pop_size = self.growth_curve(new_fitness = fitness)
+            self.sensor= [self.pop_size, self.action, self.calc_reward(fitness = fitness), pop_size]
+                #update pop size vector
+            self.pop_size = pop_size    
+        else:
+            print("please specify either state_vector, fitness, or pop_size for train_input when initializing the environment")
+            return
         
         #update vcount
         self.update_vcount(fitness = fitness)

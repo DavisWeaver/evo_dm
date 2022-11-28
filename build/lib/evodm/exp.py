@@ -349,4 +349,32 @@ def signal2noise(noise_vec):
     
     return df
 
+def count_jumps(gen_per_step = 50, pop_size=10000):
+    '''
+    experiment to count the number of jumps that the E.Coli population can achieve given gen_per_step and pop_size 
+    Args
+       gen_per_step
+       pop_size
+    Returns: pd.dataframe
+    '''
+    hp_wf = hyperparameters()
+    hp_wf.WF = True
+    hp_wf.EPISODES=5
+    hp_wf.MIN_REPLAY_MEMORY_SIZE=50
+    hp_wf.MINIBATCH_SIZE = 25
+    hp_wf.TRAIN_INPUT = 'fitness'
+    hp_wf.GEN_PER_STEP = gen_per_step
+    hp_wf.POP_SIZE = pop_size
+
+    agent = DrugSelector(hp = hp_wf)
+    jumps = []
+    for i in range(1000):
+        agent.env.update_drug(random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS)))
+        agent.env.step()
+        genotypes = list(agent.env.pop.keys())
+        num_jumps = [i.count('1') for i in genotypes]
+        jumps.append(np.max(num_jumps))
+        agent.env.reset()
+
+
 

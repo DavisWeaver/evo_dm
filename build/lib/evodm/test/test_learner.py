@@ -617,3 +617,12 @@ def test_memory_wf3(hp_wf):
 
     fit = agent.env.compute_pop_fitness(drug = agent.env.drug, sv = agent.env.pop)
     assert fit == agent.replay_memory[len(agent.replay_memory) - 1][3][15]
+
+def test_memory_wf4(hp_wf):
+    hp_wf.TRAIN_INPUT = 'fitness'
+    hp_wf.GEN_PER_STEP = 50
+    agent = DrugSelector(hp = hp_wf)
+    for i in range(10):
+        agent.env.update_drug(random.randint(np.min(agent.env.ACTIONS), np.max(agent.env.ACTIONS)))
+        agent.env.step()
+        agent.update_replay_memory()

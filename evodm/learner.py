@@ -435,7 +435,7 @@ def practice(agent, naive = False, standard_practice = False,
             if i==0:
                 agent.env.step()
                 continue
-            i=i-1 #correct for the drastic step we had to take up above ^
+            i_fixed =i-1 #correct for the drastic step we had to take up above ^
             # This part stays mostly the same, the change is to query a model for Q values
             if np.random.random() > agent.hp.epsilon:
                 # Get action from Q table
@@ -451,7 +451,7 @@ def practice(agent, naive = False, standard_practice = False,
                         else:
                             agent.env.action = random.randint(np.min(agent.env.ACTIONS),np.max(agent.env.ACTIONS))
                 elif dp_solution:
-                    agent.env.action = compute_optimal_action(agent, dp_policy, step = i, prev_action=prev_action)
+                    agent.env.action = compute_optimal_action(agent, dp_policy, step = i_fixed, prev_action=prev_action)
                 else:
                     if wf:
                         agent.env.update_drug(np.argmax(agent.get_qs()))
@@ -465,7 +465,7 @@ def practice(agent, naive = False, standard_practice = False,
                         avail_actions = [action for action in agent.env.ACTIONS if action != agent.env.action] #grab all actions except the one currently selected
                         agent.env.action = random.sample(avail_actions, k = 1)[0] #need to take the first element of the list because thats how random.sample outputs it
                 elif dp_solution:
-                    agent.env.action = compute_optimal_action(agent, dp_policy, step = i, prev_action = prev_action)
+                    agent.env.action = compute_optimal_action(agent, dp_policy, step = i_fixed, prev_action = prev_action)
                 elif wf:
                     agent.env.update_drug(random.randint(np.min(agent.env.ACTIONS),np.max(agent.env.ACTIONS)))
                 else: 

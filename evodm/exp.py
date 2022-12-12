@@ -1,5 +1,6 @@
 from evodm.learner import *
 from evodm.evol_game import define_mira_landscapes
+from evodm.landscapes import Landscape
 import pandas as pd
 import numpy as np
 from itertools import combinations
@@ -375,6 +376,13 @@ def count_jumps(gen_per_step = 50, pop_size=10000):
         num_jumps = [i.count('1') for i in genotypes]
         jumps.append(np.max(num_jumps))
         agent.env.reset()
+
+
+def compute_opp_ls(drugids = ['CTX', 'CPR', 'SAM', 'AMP', 'TZP']):
+    drugs= define_mira_landscapes(as_dict= True)
+    opp_ls = [np.min([drugs[i][j] for i in iter(drugids)]) for j in range(16)]
+    
+    return opp_ls
 
 
 

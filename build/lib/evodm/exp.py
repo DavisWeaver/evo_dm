@@ -1,10 +1,12 @@
 from evodm.learner import *
 from evodm.evol_game import define_mira_landscapes
+from evodm.landscapes import Landscape
 import pandas as pd
 import numpy as np
 from itertools import combinations
+import pickle
 
-def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
+def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
                   reset_every = 20, min_epsilon = 0.005, 
                   train_input = "fitness",  random_start = False, 
                   noise = False, noise_modifier = 1, num_drugs = 4, 
@@ -138,8 +140,13 @@ def evol_deepmind(num_evols = 1, N = 5, episodes = 50,
         dp_V = []
         dp_rewards=[]
 
+    if savepath is not None:
+        file =open(savepath, 'wb')
+        pickle.dump(agent, file)
+
     return [rewards, naive_rewards, agent, naive_agent, dp_agent, dp_rewards,
             dp_policy, naive_policy, policy, dp_V]
+
 
 #rewards = evol_deepmind()
 #naive_rewards= evol_deepmind(naive = True)
@@ -375,6 +382,13 @@ def count_jumps(gen_per_step = 50, pop_size=10000):
         num_jumps = [i.count('1') for i in genotypes]
         jumps.append(np.max(num_jumps))
         agent.env.reset()
+
+
+def compute_opp_ls(drugids = ['CTX', 'CPR', 'SAM', 'AMP', 'TZP']):
+    drugs= define_mira_landscapes(as_dict= True)
+    opp_ls = [np.min([drugs[i][j] for i in iter(drugids)]) for j in range(16)]
+    
+    return opp_ls
 
 
 

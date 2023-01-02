@@ -1,9 +1,11 @@
 # this file will define the learner class, along with required methods -
 # we are taking inspiration (and in some cases borrowing heavily) from the following
 # tutorial: https://pythonprogramming.net/training-deep-q-learning-dqn-reinforcement-learning-python-tutorial/?completed=/deep-q-learning-dqn-reinforcement-learning-python-tutorial/
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
 from tensorflow.keras.optimizers import Adam
+from tensorflow.python.keras.layers import deserialize, serialize
+from tensorflow.python.keras.saving import saving_utils
 from tensorflow.keras.utils import to_categorical
 from collections import deque
 from evodm.evol_game import evol_env, evol_env_wf
@@ -17,6 +19,32 @@ from copy import deepcopy
 # want to screw around with them.
 #or edit directly
 
+def unpack(model, training_config, weights):
+    restored_model = deserialize(model)
+    if training_config is not None:
+        restored_model.compile(
+            **saving_utils.compile_args_from_training_config(
+                training_config
+            )
+        )
+    restored_model.set_weights(weights)
+    return restored_model
+
+# Hotfix function
+def make_keras_picklable():
+
+    def __reduce__(self):
+        model_metadata = saving_utils.model_metadata(self)
+        training_config = model_metadata.get("training_config", None)
+        model = serialize(self)
+        weights = self.get_weights()
+        return (unpack, (model, training_config, weights))
+
+    cls = Model
+    cls.__reduce__ = __reduce__
+
+# Run the function
+make_keras_picklable()
 
 class hyperparameters:
     '''

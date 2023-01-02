@@ -143,6 +143,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
     if savepath is not None:
         file =open(savepath, 'wb')
         pickle.dump(agent, file)
+        file.close()
 
     return [rewards, naive_rewards, agent, naive_agent, dp_agent, dp_rewards,
             dp_policy, naive_policy, policy, dp_V]

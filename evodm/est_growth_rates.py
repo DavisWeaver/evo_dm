@@ -83,9 +83,9 @@ def est_growth_rates(data_path,prev_action,save_folder) -> dict:
         os.mkdir(save_folder)
 
     for row in row_list:
-        for col in range(1,13):
+        for col in range(1,13): # 12 columns
 
-            fig,ax_list = plt.subplots(ncols=2,figsize=(8,3))
+            fig,ax_list = plt.subplots(ncols=2,figsize=(8,3)) # figures for spot-checking
 
             key = row + str(col)
 
@@ -97,11 +97,10 @@ def est_growth_rates(data_path,prev_action,save_folder) -> dict:
                 time = time[1:]
 
 
-            lnOD = np.log(OD/np.min(OD))
+            lnOD = np.log(OD/np.min(OD)) # normalize OD data
 
             # Get the break points using pelt
-            # algo = rpt.Pelt(model='l1').fit(lnOD)
-            # breaks = algo.predict(pen=2)
+            # jump, min_size, and pen are hyperparameters that may need tuning
             algo = rpt.Pelt(model='l2',jump=2,min_size=5).fit(lnOD)
             breaks = algo.predict(pen=0.1)
 

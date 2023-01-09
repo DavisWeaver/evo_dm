@@ -164,7 +164,7 @@ def generate_random_drugs(row = ['F']):
     choices = [i+1 for i in range(15)]
     out={}
     for i in iter(row):
-        for j in range(15):
+        for j in range(12):
             key= i + str(j+1)
             val = np.random.choice(a = choices, size =1)[0]
             out[key] = val
@@ -177,7 +177,7 @@ def format_single_drug(rows, vals):
     '''
     out={}
     for i in range(len(rows)):
-        for j in range(15):
+        for j in range(12):
             key= rows[i] + str(j+1)
             val = vals[i]
             out[key]=val
@@ -189,7 +189,7 @@ def format_plate(day1=True, platepath = ''):
     Function to format plate for evodm validation experiment
     returns dict where keys are plate coordinates and vals are drug codes
     '''
-    single_drugs = format_single_drug(rows = ['C', 'D', 'E'], vals = [8, 12, 4]) 
+    out = format_single_drug(rows = ['C', 'D', 'E'], vals = [8, 12, 4]) 
     controls = format_single_drug(rows = ['A', 'B'], vals = [0,1])
     random = generate_random_drugs()   
     if(day1):
@@ -197,11 +197,20 @@ def format_plate(day1=True, platepath = ''):
     else:
         rl_fit = format_rl_fit(platefile = platepath)
 
+    out.update(controls)
+    out.update(random)
+    out.update(rl_fit)
+
+    return out
+    
+
+
 def format_rl_fit(platefile):
     '''
     Function to generate dict with RL_fit drug recommendations at correct coordinates
     Args: platefile - where to find the platereader data
     '''
+    return 2
 
 #rewards = evol_deepmind()
 #naive_rewards= evol_deepmind(naive = True)

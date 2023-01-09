@@ -190,7 +190,7 @@ def format_plate(day1=True, platepath = ''):
     returns dict where keys are plate coordinates and vals are drug codes
     '''
     out = format_single_drug(rows = ['C', 'D', 'E'], vals = [8, 12, 4]) 
-    controls = format_single_drug(rows = ['A', 'B'], vals = [0,1])
+    controls = format_single_drug(rows = ['A', 'B'], vals = [0,-1])
     random = generate_random_drugs()   
     if(day1):
         rl_fit = format_single_drug(rows = ['G','H'], vals = [4,4])

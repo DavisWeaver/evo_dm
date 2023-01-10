@@ -4,7 +4,7 @@ from evodm.landscapes import Landscape
 import pandas as pd
 import numpy as np
 from itertools import combinations
-from est_growth_rates import * 
+from evodm.est_growth_rates import * 
 import pickle
 
 def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
@@ -214,7 +214,7 @@ def format_plate(day1=True, platepath = '', agentpath = '', savefolder = '',
     random = generate_random_drugs()   
    
    #need to call update on the rl_fit one as the base-  
-   #because format_rl_fit will predict drugs for all 96 wells.
+   # because format_rl_fit will predict drugs for all 96 wells.
 
     out.update(controls)
     out.update(random)

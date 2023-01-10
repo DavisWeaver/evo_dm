@@ -148,6 +148,69 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
     return [rewards, naive_rewards, agent, naive_agent, dp_agent, dp_rewards,
             dp_policy, naive_policy, policy, dp_V]
 
+def load_agent(savepath):
+    file = open(savepath, 'rb')
+    agent = pickle.load(file)
+    file.close()
+    return agent
+
+def generate_random_drugs(row = ['F']):
+    '''
+    Function to generate dict with random drugs being applied at coordinates in 96-well
+    Args:
+        row iterable
+            row indices we should do randomly 
+    '''
+    choices = [i+1 for i in range(15)]
+    out={}
+    for i in iter(row):
+        for j in range(12):
+            key= i + str(j+1)
+            val = np.random.choice(a = choices, size =1)[0]
+            out[key] = val
+    return out
+
+def format_single_drug(rows, vals):
+    '''
+    Function to generate dict with single drug applications
+    Args:
+    '''
+    out={}
+    for i in range(len(rows)):
+        for j in range(12):
+            key= rows[i] + str(j+1)
+            val = vals[i]
+            out[key]=val
+
+    return out
+
+def format_plate(day1=True, platepath = ''):
+    '''
+    Function to format plate for evodm validation experiment
+    returns dict where keys are plate coordinates and vals are drug codes
+    '''
+    out = format_single_drug(rows = ['C', 'D', 'E'], vals = [8, 12, 4]) 
+    controls = format_single_drug(rows = ['A', 'B'], vals = [-1,0])
+    random = generate_random_drugs()   
+    if(day1):
+        rl_fit = format_single_drug(rows = ['G','H'], vals = [4,4])
+    else:
+        rl_fit = format_rl_fit(platefile = platepath)
+
+    out.update(controls)
+    out.update(random)
+    out.update(rl_fit)
+
+    return out
+    
+
+
+def format_rl_fit(platefile):
+    '''
+    Function to generate dict with RL_fit drug recommendations at correct coordinates
+    Args: platefile - where to find the platereader data
+    '''
+    return 2
 
 #rewards = evol_deepmind()
 #naive_rewards= evol_deepmind(naive = True)

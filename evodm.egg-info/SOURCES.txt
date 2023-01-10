@@ -2,6 +2,7 @@ README.md
 setup.py
 evodm/__init__.py
 evodm/dpsolve.py
+evodm/est_growth_rates.py
 evodm/evol_game.py
 evodm/exp.py
 evodm/landscapes.py

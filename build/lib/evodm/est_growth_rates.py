@@ -137,7 +137,7 @@ def est_growth_rates(data_path,prev_action,save_folder) -> dict:
             # with the growth rate
             output = np.zeros(16)
             output[prev_action[key]] = 1
-            output[-1] = res.slope
+            output[-1] = res.slope*1000
 
             results[key] = output
 

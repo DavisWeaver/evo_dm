@@ -120,7 +120,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
         return [rewards, agent, policy]
         
     if mira:
-        hp.NORMALIZE_DRUGS = False
+        hp.NORMALIZE_DRUGS = True
         drugs = define_mira_landscapes()
     #initialize agent, including the updated hyperparameters
     agent = DrugSelector(hp = hp, drugs = drugs)
@@ -162,7 +162,7 @@ def generate_random_drugs(row = ['F']):
         row iterable
             row indices we should do randomly 
     '''
-    choices = [i+1 for i in range(15)]
+    choices = [i+1 for i in range(15) if i not in [1,6,10]]
     out={}
     for i in iter(row):
         for j in range(12):
@@ -186,7 +186,7 @@ def format_single_drug(rows, vals):
     return out
 
 def format_plate(day1=True, platepath = '', agentpath = '', savefolder = '',
-                 prev_action = None):
+                 prev_action = None, experimental_drug = 4):
     '''
     Function to format plate for evodm validation experiment
     returns dict where keys are plate coordinates and vals are drug codes
@@ -197,13 +197,15 @@ def format_plate(day1=True, platepath = '', agentpath = '', savefolder = '',
             platereader data from previous day
         agentpath str
             str to load agent from
+        experimental_drug int
+        
 
     '''
     #get agent
     agent = load_agent(savepath = agentpath)
 
     if(day1):
-        out = format_single_drug(rows = ['G','H'], vals = [4,4])
+        out = format_single_drug(rows = ['G','H'], vals = [experimental_drug,experimental_drug])
     else:
         out = format_rl_fit(platefile = platepath, savefolder = savefolder,
                                agent = agent, prev_action = prev_action)

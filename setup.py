@@ -16,6 +16,7 @@ setup(
       "pytest", 
       "pymdptoolbox", 
       "pandas", 
-      "matplotlib"
+      "matplotlib", 
+      "ruptures"
     ],
 )

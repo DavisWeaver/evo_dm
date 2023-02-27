@@ -112,12 +112,7 @@ class Landscape:
     def define_adjMut(self, mut, i):
         """
         define the allowable adjacent mutants
-
-        Get rid of rounding issues..
-
-        old code:  fitter = list(filter(lambda x: adjFit[x]>self.ls[i], mut))
-
-        new code:  fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))
+        Allow n step "hgt-inspired" jumps
         """
         adjMut = [i ^ (1 << m) for m in mut]
         if self.num_jumps > 1:
@@ -126,17 +121,19 @@ class Landscape:
                 for j in range(2**self.N):
                     if j == i:
                         continue
-                    elif bin(j).count("1") == (bin(i).count("1") + jumps): #check if test_mut is an allowable forward transition
+                    #this checks that the original mutations are present in any multi-jumps
+                    elif bin(j).count("1") == (bin(i).count("1") + jumps) and i == i & j: #check if test_mut is an allowable forward transition
                         extra_edges.append(j)
-                    elif bin(j).count("1") == (bin(i).count("1") + jumps): #some condition for backward double losses
+                    #This checks that we didn't gain and lose in a single step.
+                    elif bin(j).count("1") == (bin(i).count("1") - jumps) and j == i & j: #some condition for backward double losses
                         extra_edges.append(j)
                     else:
                         continue
 
-        for t in iter(extra_edges):
-            adjMut.append(t)
-        
-        adjMut = [*set(adjMut)]
+            for t in iter(extra_edges):
+                adjMut.append(t)
+            
+            adjMut = [*set(adjMut)]
 
         return adjMut
         

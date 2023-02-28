@@ -5,6 +5,7 @@ evodm/dpsolve.py
 evodm/est_growth_rates.py
 evodm/evol_game.py
 evodm/exp.py
+evodm/hgt_exp.py
 evodm/landscapes.py
 evodm/learner.py
 evodm.egg-info/PKG-INFO

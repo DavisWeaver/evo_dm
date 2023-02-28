@@ -104,7 +104,7 @@ class Landscape:
                 else:
                     tranVal = 1.0 / fitLen                                                   # If at least one mutation is more fit, assign a fitness of 1/(# of more fit mutatnts) to each accessible genotype.
                     for f in fitter:
-                        TM[adjMut[f]][i] = tranVal
+                        TM[f][i] = tranVal
             if store: self.TM = TM # store the transition matrix for this landscape object
             return TM
         else: return self.TM
@@ -138,8 +138,6 @@ class Landscape:
         return adjMut
         
             
-
-
     def get_TM_phenom(self, phenom, store=False):
         """
         Returns the transition matrix for this landscape, with phenomenological stepping (see Tan and Gore 2012). If store=True, it will
@@ -240,6 +238,7 @@ class Landscape:
         adjFit = [self.ls[j] for j in adjMut]
         return adjMut, adjFit
 
+    #next few functions support the whacky hgt landscapes
     def find_max_indices_alt(self):
         """
         Returns a list of indices of local maxes in this landscape, allowing for multi-step jumps
@@ -247,6 +246,10 @@ class Landscape:
         tm = self.get_TM()
         indices = [i for i in range(2**self.N) if tm[i,i] == 1]
         return indices
+
+    def get_total_edges(self):
+        tm = self.get_TM()
+        return np.sum(tm>0)
 
     def find_max_indices(self):
         """

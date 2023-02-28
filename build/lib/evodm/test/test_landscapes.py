@@ -90,3 +90,66 @@ def test_define_adjMutN4i13(ls_N4):
     bools = [i in [9,5,15,12,8,4,1] for i in adjmut]
     bools.append(len(adjmut) == 7)
     assert all(bools)
+
+def test_define_adjMutN5i0(ls_N5):
+    mut = range(ls_N5.N)
+    i = 0
+    adjmut = ls_N5.define_adjMut(mut = mut, i = i)
+    bools = [i in [1,2,4,8,16,24,20,18,17,12,10,9,6,5,3] for i in adjmut]
+    bools.append(len(adjmut) == 15)
+    assert all(bools)
+
+
+def test_define_adjMutN5i1(ls_N5):
+    mut = range(ls_N5.N)
+    i = 1
+    adjmut = ls_N5.define_adjMut(mut = mut, i = i)
+    bools = [i in [0,3,5,9,17, 7,13,11,19,21,25] for i in adjmut]
+    bools.append(len(adjmut) == 11)
+    assert all(bools)
+
+def test_define_adjMutN5i3(ls_N5):
+    mut = range(ls_N5.N)
+    i = 3
+    adjmut = ls_N5.define_adjMut(mut = mut, i = i)
+    bools = [i in [0,7, 1,2,11,19,15,27,23] for i in adjmut]
+    bools.append(len(adjmut) == 9)
+    assert all(bools)
+
+def test_define_adjMutN5i15(ls_N5):
+    mut = range(ls_N5.N)
+    i = 15
+    adjmut = ls_N5.define_adjMut(mut = mut, i = i)
+    assert len(adjmut) == 11
+
+def test_define_adjMutN5i0jump3(ls_N5):
+    mut = range(ls_N5.N)
+    i=0
+    ls_N5.num_jumps = 3
+    adjmut = ls_N5.define_adjMut(mut = mut, i = i)
+    assert len(adjmut) == 25
+
+def test_define_adjMutN5i1jump3(ls_N5):
+    mut = range(ls_N5.N)
+    i=1
+    ls_N5.num_jumps = 3
+    adjmut = ls_N5.define_adjMut(mut = mut, i = i)
+    assert len(adjmut) == 15
+
+def test_define_adjMutN5i0jump4(ls_N5):
+    mut = range(ls_N5.N)
+    i=0
+    ls_N5.num_jumps = 4
+    adjmut = ls_N5.define_adjMut(mut = mut, i = i)
+    assert len(adjmut) == 30
+
+
+def test_define_adjMutN5i0jump5(ls_N5):
+    mut = range(ls_N5.N)
+    i=0
+    ls_N5.num_jumps = 5
+    adjmut = ls_N5.define_adjMut(mut = mut, i = i)
+    assert len(adjmut) == 31
+
+def test_find_max_indices():
+    ls = Landscape(N=4, sigma = 0.5, num_jumps = 1)

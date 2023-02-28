@@ -75,7 +75,7 @@ class Landscape:
         else: self.ls = ls
         if parent is not None: self.parent = parent
 
-    def get_TM(self, store=False):
+    def get_TM(self, store=False, update = False):
         """
         Returns the transition matrix for this landscape. If store=True, it will
         be saved in a field of this object (TM) for later use. If a stored copy already
@@ -87,16 +87,16 @@ class Landscape:
 
         new code:  fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))
         """
-        if not hasattr(self, 'TM'):
+        if not hasattr(self, 'TM') and not update: #give the option to update the transition matrix of a given landscape
             mut = range(self.N)                                               # Creates a list (0, 1, ..., N) to call for bitshifting mutations.
             TM = np.zeros((2**self.N,2**self.N))                                   # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
 
             for i in range(2**self.N):
                                      # For the current genotype i, creates list of genotypes that are 1 mutation away.
                 adjMut = self.define_adjMut(mut = mut, i = i) #This function implements new possibilities for HGT
-                adjFit = [self.ls[j] for j in adjMut]                         # Creates list of fitnesses for each corresponding genotype that is 1 mutation away.
+                fitter = [j for j in adjMut if self.ls[j] - self.ls[i] > 0.00001]                         # Creates list of fitnesses for each corresponding genotype that is 1 mutation away.
 
-                fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))                      # Finds which indices of adjFit are more fit than the current genotype and thus available for mutation.
+               #fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))                      # Finds which indices of adjFit are more fit than the current genotype and thus available for mutation.
 
                 fitLen = len(fitter)
                 if fitLen == 0:                                          # If no mutations are more fit, stay in current genotype.
@@ -240,6 +240,13 @@ class Landscape:
         adjFit = [self.ls[j] for j in adjMut]
         return adjMut, adjFit
 
+    def find_max_indices_alt(self):
+        """
+        Returns a list of indices of local maxes in this landscape, allowing for multi-step jumps
+        """
+        tm = self.get_TM()
+        indices = [i for i in range(2**self.N) if tm[i,i] == 1]
+        return indices
 
     def find_max_indices(self):
         """

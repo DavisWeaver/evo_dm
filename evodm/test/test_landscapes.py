@@ -121,7 +121,7 @@ def test_define_adjMutN5i15(ls_N5):
     i = 15
     adjmut = ls_N5.define_adjMut(mut = mut, i = i)
     assert len(adjmut) == 11
-    
+
 def test_define_adjMutN5i0jump3(ls_N5):
     mut = range(ls_N5.N)
     i=0
@@ -150,3 +150,6 @@ def test_define_adjMutN5i0jump5(ls_N5):
     ls_N5.num_jumps = 5
     adjmut = ls_N5.define_adjMut(mut = mut, i = i)
     assert len(adjmut) == 31
+
+def test_find_max_indices():
+    ls = Landscape(N=4, sigma = 0.5, num_jumps = 1)

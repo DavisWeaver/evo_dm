@@ -5,6 +5,7 @@ import math
 import random
 import itertools
 import copy
+from copy import deepcopy
 # Functions to convert data describing bacterial evolution sim into a format
 # that can be used by the learner
 
@@ -486,7 +487,7 @@ def define_mira_landscapes(as_dict = False):
 
 class evol_env_wf:
     def __init__(self, train_input = 'fitness', pop_size = 100000, 
-                 gen_per_step = 20, mutation_rate = 1e-5):
+                 gen_per_step = 20, mutation_rate = 1e-5, hgt_rate = 1e-5):
 
         self.update_target_counter= 0 
         #save everything
@@ -495,6 +496,7 @@ class evol_env_wf:
         self.pop_size = pop_size
         self.gen_per_step = gen_per_step
         self.mutation_rate = mutation_rate
+        self.hgt_rate = hgt_rate
         self.TRAIN_INPUT = train_input
         self.NUM_DRUGS = 15
         self.pop = {}
@@ -648,6 +650,29 @@ class evol_env_wf:
                 self.pop[new_haplotype] += 1
             else:
                 self.pop[new_haplotype] = 1
+
+    """
+    Function that gets the number of hgt events we should see.
+    """
+    def get_hgt_count(self):
+        mean = self.hgt_rate * self.pop_size * self.N
+        return np.random.poisson(mean)
+    
+    """
+    Function that find a random pair of haplotypes to mutate and do the hgt event
+    """
+    def hgt_event(self):
+        haplotype_1 = self.get_random_haplotype()
+        haplotype_2 = self.get_random_haplotype()
+        new_hap2 = ""
+        for i in range(len(haplotype_1)):
+            if haplotype_1[i] == '1' and haplotype_2[i] == '0':
+                new_hap2 += "1"
+            else:
+                new_hap2 += haplotype_2[i]
+        
+        self.pop[haplotype_2] -=1
+        self.pop[new_hap2] += 1
 
     """
     Chooses a random haplotype in the population that will be returned.

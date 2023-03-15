@@ -38,3 +38,46 @@ def num_peaks(N, sigma, n, num_jumps):
 
     df = pd.DataFrame(data)
     return df
+
+def run_sim_hgt(max_evol_steps, ls):
+    
+    '''
+    Function to progress evolutionary simulation forward until the population reaches a local maxima and stops evolving
+
+    Args
+        evol_steps: int
+            number of steps
+        N: int
+            number of genotypes for the sims
+        sigma: float
+            constant defining the degree of epistasis on the landscapes
+        state_vector: array
+            N**2 length array defining the position of the population in genotype space
+        drugs: list of lists
+            list of n fitness landscapes representing different drug regimes
+        action: int
+            which drug was selected
+        average_outcomes bool
+            should all possible futures be averaged into the state vector or should 
+            we simulate a single evolutionary trajectory? defaults to False
+    Returns: fitness, state_vector
+        fitness: 
+            population fitness in chosen drug regime
+    '''
+    state_vector  = np.zeros((2**ls.N,1))
+    state_vector[0][0] = 1
+    # Evolve for 100 steps.
+    for i in range(max_evol_steps):
+        old_state_vector = state_vector
+        # Performs a single evolution step 
+        state_vector = ls.evolve(1, p0=state_vector)
+         # This is the fitness of the population when the drug is selected to be used.
+        if all(state_vector == old_state_vector):
+            break
+
+    fit = np.dot(ls.ls,state_vector) 
+    max_fit = np.max(ls.ls)
+    prop_global_max = state_vector[ls.find_global_max()]
+    return i, fit, max_fit, prop_global_max
+        
+    return reward, state_vector

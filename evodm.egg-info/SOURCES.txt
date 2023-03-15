@@ -1,6 +1,7 @@
 README.md
 setup.py
 evodm/__init__.py
+evodm/data.py
 evodm/dpsolve.py
 evodm/est_growth_rates.py
 evodm/evol_game.py
@@ -17,5 +18,6 @@ evodm/test/__init__.py
 evodm/test/test_dpsolve.py
 evodm/test/test_evol_game.py
 evodm/test/test_exp.py
+evodm/test/test_hgt_exp.py
 evodm/test/test_landscapes.py
 evodm/test/test_learner.py

@@ -1,4 +1,6 @@
 from evodm.landscapes import Landscape
+from evodm.evol_game import define_drugs, evol_env_wf, generate_landscapes, normalize_landscapes
+from evodm.data import get_example_drug
 import pandas as pd
 import numpy as np
 
@@ -80,4 +82,42 @@ def run_sim_hgt(max_evol_steps, ls):
     prop_global_max = state_vector[ls.find_global_max()]
     return i, fit, max_fit, prop_global_max
         
-    return reward, state_vector
+
+def summarize_wf_hgt(N=5, sigma = 0.5, num_drugs = 5, pop_size = 10000, 
+                     gen_per_step = 20, mutation_rate = 1e-5, hgt_rate= 1e-5):
+    ls = generate_landscapes(N=N, sigma = sigma)
+    drugs= define_drugs(landscape_to_keep = ls, num_drugs=num_drugs)
+    drugs = normalize_landscapes(drugs) #can't have any non 0 fitnesses or everyone loses their gd mind
+
+    env = evol_env_wf(N =N, num_drugs = num_drugs, pop_size = pop_size, gen_per_step=gen_per_step,
+                       mutation_rate=mutation_rate, hgt_rate = hgt_rate,
+                       drugLandscape=drugs)
+    
+    env.drug = get_example_drug(N=N)
+    #a procedurally generated drug landscape where the best allele is very far from the starting point
+    #hard coding it here just so all versions of this summary analysis use the same landscape
+    #jk I'm going to load it from a different function - should do disk but I'm too lazy
+    
+    data = []
+    max_fitness = np.max(drugs[0])
+    for i in range(10000):
+        env.time_step()
+        fitness = env.compute_pop_fitness(drug = env.drug, sv = env.pop)
+        shannon_index = env.calc_shannon_diversity()
+        dominant_pop = max(env.pop)
+        data.append({'N':N, 'sigma':sigma, 'pop_size':pop_size, 
+                     'mutation_rate':mutation_rate, 
+                     'hgt_rate': hgt_rate,
+                     'step_num':i,
+                     'fitness':fitness,
+                     'shannon_index':shannon_index, 
+                     'dom_allele': dominant_pop})
+
+        if abs(fitness - max_fitness) < 0.02:
+            break
+
+    df = pd.DataFrame(data)
+    
+
+
+

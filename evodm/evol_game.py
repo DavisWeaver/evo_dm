@@ -5,7 +5,6 @@ import math
 import random
 import itertools
 import copy
-from copy import deepcopy
 # Functions to convert data describing bacterial evolution sim into a format
 # that can be used by the learner
 
@@ -486,19 +485,20 @@ def define_mira_landscapes(as_dict = False):
 #more sophisticated in the future. 
 
 class evol_env_wf:
-    def __init__(self, train_input = 'fitness', pop_size = 100000, 
-                 gen_per_step = 20, mutation_rate = 1e-5, hgt_rate = 1e-5):
+    def __init__(self, N= 5, num_drugs = 5, train_input = 'state_vector', pop_size = 10000, 
+                 gen_per_step = 20, mutation_rate = 1e-5, hgt_rate = 1e-5, 
+                 drugLandscape = define_mira_landscapes()):
 
         self.update_target_counter= 0 
         #save everything
         self.episode_number = 1
-        self.N= 4
+        self.N= N
         self.pop_size = pop_size
         self.gen_per_step = gen_per_step
         self.mutation_rate = mutation_rate
         self.hgt_rate = hgt_rate
         self.TRAIN_INPUT = train_input
-        self.NUM_DRUGS = 15
+        self.NUM_DRUGS = num_drugs
         self.pop = {}
         self.sensor = []
         self.history = []
@@ -508,11 +508,7 @@ class evol_env_wf:
         self.base_haplotype = ''.join(["0" for i in range(self.N)])
 
         genotypes = [''.join(seq) for seq in itertools.product("01", repeat=self.N)]
-        drugLandscape = define_mira_landscapes()
         drugs = []
-
-        
-        drugLandscape = define_mira_landscapes()
 
         self.pop[self.base_haplotype] = self.pop_size
 
@@ -622,10 +618,9 @@ class evol_env_wf:
         self.state_vector = self.convert_state_vector(sv = self.pop)
         self.fitness = self.compute_pop_fitness(drug = self.drug, sv = self.pop)
 
-        
-
     def time_step(self):
         self.mutation_step()
+        self.hgt_event()
         self.offspring_step()
 
     def mutation_step(self):
@@ -633,10 +628,14 @@ class evol_env_wf:
         for i in range(mutation_count):
             self.mutation_event()
 
+    def hgt_step(self):
+        hgt_count = self.get_hgt_count()
+        for i in range(hgt_count):
+            self.hgt_event()
+
     def get_mutation_count(self):
         mean = self.mutation_rate * self.pop_size * self.N
         return np.random.poisson(mean)
-
 
     """
     Function that find a random haplotype to mutate and adds that new mutant to the population. Reduces mutated population by 1.
@@ -672,7 +671,11 @@ class evol_env_wf:
                 new_hap2 += haplotype_2[i]
         
         self.pop[haplotype_2] -=1
-        self.pop[new_hap2] += 1
+
+        if new_hap2 in self.pop:
+            self.pop[new_hap2] += 1
+        else: 
+            self.pop[new_hap2] = 1
 
     """
     Chooses a random haplotype in the population that will be returned.
@@ -712,13 +715,6 @@ class evol_env_wf:
 
         return np.asarray(prev_action_cat), np.asarray(action_cat)
 
-
-    #################################################################################################################################
-    """
-    Below is the code responsible for offspring in the Wright-Fisher model, in order of function calls.
-    """
-
-
     """
     Gets the number of counts after an offspring step and stores them in the haplotype. If a population is reduced to zero then delete it.
     """
@@ -742,6 +738,18 @@ class evol_env_wf:
         total = sum(weights)
         weights = [x / total for x in weights]
         return list(np.random.multinomial(self.pop_size, weights))
+    
+
+    #####################################################################################################################
+    """Shannon Diversity Index"""
+    def calc_shannon_diversity(self):
+        H = 0
+        for i in iter(self.pop.keys()):
+            allele_proportion = self.pop[i] / self.pop_size
+            H += (allele_proportion * math.log(allele_proportion))
+        
+        return -H
+
 
 
 

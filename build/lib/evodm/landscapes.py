@@ -247,6 +247,11 @@ class Landscape:
         indices = [i for i in range(2**self.N) if tm[i,i] == 1]
         return indices
 
+    def find_global_max(self):
+        max_fit = np.max(self.ls)
+        gmax_index = [i for i in range(2**self.N) if self.ls[i] == max_fit][0]
+        return(gmax_index)
+
     def get_total_edges(self):
         tm = self.get_TM()
         return np.sum(tm>0)

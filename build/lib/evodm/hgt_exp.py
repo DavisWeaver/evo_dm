@@ -89,8 +89,9 @@ def summarize_wf_hgt(N=5, sigma = 0.5, num_drugs = 5, pop_size = 10000,
     drugs= define_drugs(landscape_to_keep = ls, num_drugs=num_drugs)
     drugs = normalize_landscapes(drugs) #can't have any non 0 fitnesses or everyone loses their gd mind
 
-    env = evol_env_wf(N =N, num_drugs = num_drugs, pop_size = pop_size, gen_per_step=gen_per_step,
-                       mutation_rate=mutation_rate, hgt_rate = hgt_rate,
+    env = evol_env_wf(N =N, num_drugs = num_drugs, pop_size = pop_size, 
+                      gen_per_step=gen_per_step,
+                      mutation_rate=mutation_rate, hgt_rate = hgt_rate,
                        drugLandscape=drugs)
     
     env.drug = get_example_drug(N=N)
@@ -105,18 +106,21 @@ def summarize_wf_hgt(N=5, sigma = 0.5, num_drugs = 5, pop_size = 10000,
         fitness = env.compute_pop_fitness(drug = env.drug, sv = env.pop)
         shannon_index = env.calc_shannon_diversity()
         dominant_pop = max(env.pop)
+        num_pops = len(env.pop)
         data.append({'N':N, 'sigma':sigma, 'pop_size':pop_size, 
                      'mutation_rate':mutation_rate, 
                      'hgt_rate': hgt_rate,
                      'step_num':i,
                      'fitness':fitness,
                      'shannon_index':shannon_index, 
-                     'dom_allele': dominant_pop})
+                     'dom_allele': dominant_pop, 
+                     'num_allels':num_pops})
 
         if abs(fitness - max_fitness) < 0.02:
             break
 
     df = pd.DataFrame(data)
+    return df
     
 
 

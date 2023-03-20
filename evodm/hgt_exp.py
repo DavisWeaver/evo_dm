@@ -85,7 +85,7 @@ def run_sim_hgt(max_evol_steps, ls):
 
 def summarize_wf_hgt(N=5, sigma = 0.5, num_drugs = 5, pop_size = 10000, 
                      gen_per_step = 20, mutation_rate = 1e-5, hgt_rate= 1e-5, 
-                     theta = 0.00005):
+                     theta = 1e-5):
     ls = generate_landscapes(N=N, sigma = sigma)
     drugs= define_drugs(landscape_to_keep = ls, num_drugs=num_drugs)
     drugs = normalize_landscapes(drugs) #can't have any non 0 fitnesses or everyone loses their gd mind
@@ -110,7 +110,7 @@ def summarize_wf_hgt(N=5, sigma = 0.5, num_drugs = 5, pop_size = 10000,
         env.time_step()
         fitness = env.compute_pop_fitness(drug = env.drug, sv = env.pop)
         shannon_index = env.calc_shannon_diversity()
-        dominant_pop = max(env.pop)
+        dominant_pop = max(env.pop, key=env.pop.get)
         num_pops = len(env.pop)
         data.append({'N':N, 'sigma':sigma, 'pop_size':pop_size, 
                      'mutation_rate':mutation_rate, 
@@ -119,20 +119,23 @@ def summarize_wf_hgt(N=5, sigma = 0.5, num_drugs = 5, pop_size = 10000,
                      'fitness':fitness,
                      'shannon_index':shannon_index, 
                      'dom_allele': dominant_pop, 
-                     'num_allels':num_pops})
+                     'num_alleles':num_pops})
         
         #check if we can stop
+        if fitness > 0.9999:
+            break
         if i != 0:
+            #need to set this up so if it stops improving for n time steps
             delta = abs(fitness - old_fit)
             if delta < theta:
                 end_counter+=1
-                if end_counter >= 10: #if fitness is static for 10 time steps in a row, stop the count
+                if end_counter >= 20: #if fitness is static for 10 time steps in a row, stop the count
                     break
             else:
                 end_counter=0
-   
+
     df = pd.DataFrame(data)
-    return df
+    return [df, env]
     
 
 

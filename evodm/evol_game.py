@@ -485,8 +485,8 @@ def define_mira_landscapes(as_dict = False):
 #more sophisticated in the future. 
 
 class evol_env_wf:
-    def __init__(self, N= 5, num_drugs = 5, train_input = 'state_vector', pop_size = 10000, 
-                 gen_per_step = 20, mutation_rate = 1e-5, hgt_rate = 1e-5, 
+    def __init__(self, N= 4, num_drugs = 15, train_input = 'state_vector', pop_size = 10000, 
+                 gen_per_step = 20, mutation_rate = 1e-6, hgt_rate = 1e-5, 
                  drugLandscape = define_mira_landscapes()):
 
         self.update_target_counter= 0 

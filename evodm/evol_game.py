@@ -486,7 +486,7 @@ def define_mira_landscapes(as_dict = False):
 
 class evol_env_wf:
     def __init__(self, train_input = 'fitness', pop_size = 100000, 
-                 gen_per_step = 20, mutation_rate = 1e-5):
+                 gen_per_step = 1, mutation_rate = 1e-5):
 
         self.update_target_counter= 0 
         #save everything

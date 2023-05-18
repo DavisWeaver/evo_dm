@@ -8,6 +8,9 @@ import itertools
 import networkx as nx
 import matplotlib.pyplot as plt
 
+def flatten(list_of_lists):
+    return list(itertools.chain.from_iterable(list_of_lists))
+
 class Landscape:
     """
     This class represents Landscapes which are used as the central objects for Markov evolutions and other calculations.
@@ -54,13 +57,14 @@ class Landscape:
     get_steadystate_rounds(correl)
         Calculates number of steps to reach steady state for paired landscape evolution
     """
-    def __init__(self, N, sigma, ls=None, parent=None):
+    def __init__(self, N, sigma, ls=None, parent=None, num_jumps = 1):
         """
         Initializes landscape objects with given N and sigma to simulate epistasis (zero sigma produces an additive landscape with exactly one global maximum).
         """
         self.N = N
         self.sigma = sigma
         self.Bs = None
+        self.num_jumps = num_jumps
         if ls is None:
             self.ls = np.array([0]) # Initializes landscape vector with fitness 0 in the first (wildtype) index
             fitness = np.random.uniform(-1, 1, N) # Generates N fitness values between -1 and 1 that will be used to generate the additive landscape.
@@ -71,7 +75,7 @@ class Landscape:
         else: self.ls = ls
         if parent is not None: self.parent = parent
 
-    def get_TM(self, store=False):
+    def get_TM(self, store=False, update = False):
         """
         Returns the transition matrix for this landscape. If store=True, it will
         be saved in a field of this object (TM) for later use. If a stored copy already
@@ -83,16 +87,16 @@ class Landscape:
 
         new code:  fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))
         """
-        if not hasattr(self, 'TM'):
+        if not hasattr(self, 'TM') and not update: #give the option to update the transition matrix of a given landscape
             mut = range(self.N)                                               # Creates a list (0, 1, ..., N) to call for bitshifting mutations.
             TM = np.zeros((2**self.N,2**self.N))                                   # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
 
             for i in range(2**self.N):
-                adjMut = [i ^ (1 << m) for m in mut]                     # For the current genotype i, creates list of genotypes that are 1 mutation away.
+                                     # For the current genotype i, creates list of genotypes that are 1 mutation away.
+                adjMut = self.define_adjMut(mut = mut, i = i) #This function implements new possibilities for HGT
+                fitter = [j for j in adjMut if self.ls[j] - self.ls[i] > 0.00001]                         # Creates list of fitnesses for each corresponding genotype that is 1 mutation away.
 
-                adjFit = [self.ls[j] for j in adjMut]                         # Creates list of fitnesses for each corresponding genotype that is 1 mutation away.
-
-                fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))                      # Finds which indices of adjFit are more fit than the current genotype and thus available for mutation.
+               #fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))                      # Finds which indices of adjFit are more fit than the current genotype and thus available for mutation.
 
                 fitLen = len(fitter)
                 if fitLen == 0:                                          # If no mutations are more fit, stay in current genotype.
@@ -100,11 +104,40 @@ class Landscape:
                 else:
                     tranVal = 1.0 / fitLen                                                   # If at least one mutation is more fit, assign a fitness of 1/(# of more fit mutatnts) to each accessible genotype.
                     for f in fitter:
-                        TM[adjMut[f]][i] = tranVal
+                        TM[f][i] = tranVal
             if store: self.TM = TM # store the transition matrix for this landscape object
             return TM
         else: return self.TM
 
+    def define_adjMut(self, mut, i):
+        """
+        define the allowable adjacent mutants
+        Allow n step "hgt-inspired" jumps
+        """
+        adjMut = [i ^ (1 << m) for m in mut]
+        if self.num_jumps > 1:
+            extra_edges=[] #The rules - no gain of allele and loss of allele on same jump - only multi-gains and multi-losses
+            for jumps in range(2, self.num_jumps+1): #self.num_jumps + 1 because of pythons stupid dumb 0 indexing scheme that I hate
+                for j in range(2**self.N):
+                    if j == i:
+                        continue
+                    #this checks that the original mutations are present in any multi-jumps
+                    elif bin(j).count("1") == (bin(i).count("1") + jumps) and i == i & j: #check if test_mut is an allowable forward transition
+                        extra_edges.append(j)
+                    #This checks that we didn't gain and lose in a single step.
+                    elif bin(j).count("1") == (bin(i).count("1") - jumps) and j == i & j: #some condition for backward double losses
+                        extra_edges.append(j)
+                    else:
+                        continue
+
+            for t in iter(extra_edges):
+                adjMut.append(t)
+            
+            adjMut = [*set(adjMut)]
+
+        return adjMut
+        
+            
     def get_TM_phenom(self, phenom, store=False):
         """
         Returns the transition matrix for this landscape, with phenomenological stepping (see Tan and Gore 2012). If store=True, it will
@@ -205,6 +238,23 @@ class Landscape:
         adjFit = [self.ls[j] for j in adjMut]
         return adjMut, adjFit
 
+    #next few functions support the whacky hgt landscapes
+    def find_max_indices_alt(self):
+        """
+        Returns a list of indices of local maxes in this landscape, allowing for multi-step jumps
+        """
+        tm = self.get_TM()
+        indices = [i for i in range(2**self.N) if tm[i,i] == 1]
+        return indices
+
+    def find_global_max(self):
+        max_fit = np.max(self.ls)
+        gmax_index = [i for i in range(2**self.N) if self.ls[i] == max_fit][0]
+        return(gmax_index)
+
+    def get_total_edges(self):
+        tm = self.get_TM()
+        return np.sum(tm>0)
 
     def find_max_indices(self):
         """

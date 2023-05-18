@@ -91,7 +91,7 @@ class hyperparameters:
         #wright-fisher controls
         self.WF = False
         self.POP_SIZE = 10000
-        self.GEN_PER_STEP = 500
+        self.GEN_PER_STEP = 1
         self.MUTATION_RATE = 1e-5
 
         #define victory conditions for player and pop

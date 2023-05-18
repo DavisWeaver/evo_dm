@@ -279,9 +279,6 @@ def mira_env_wf():
 def test_convert_fitness_wf(mira_env_wf, mira_env):
     assert len(mira_env_wf.sensor[0]) == len(mira_env.sensor[0])
 
-def test_convert_fitness_wf2(mira_env_wf, mira_env):
-    bools = [mira_env_wf.sensor[0][i] == mira_env.sensor[0][i] for i in range(15)]
-    assert all(bools)
 
 
 

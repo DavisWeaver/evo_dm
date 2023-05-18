@@ -22,7 +22,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
                   pop_size = 10000,
                   agent = "none",
                   update_target_every = 310, total_resistance = False, 
-                  starting_genotype = 0):
+                  starting_genotype = 0, train_freq = 100):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
     to try and minimize the fitness of a population evolving on a landscape.
@@ -134,7 +134,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
     naive_rewards, naive_agent, naive_policy, V = practice(naive_agent, naive = True, 
                                                            standard_practice=standard_practice, 
                                                            wf=wf)
-    rewards, agent, policy, V = practice(agent, naive = False, wf = wf)
+    rewards, agent, policy, V = practice(agent, naive = False, wf = wf, train_freq=train_freq) # added arg for train frequency
     if wf:
         dp_policy=[]
         dp_agent=[]
@@ -487,6 +487,7 @@ def compute_opp_ls(drugids = ['CTX', 'CPR', 'SAM', 'AMP', 'TZP']):
     opp_ls = [np.min([drugs[i][j] for i in iter(drugids)]) for j in range(16)]
     
     return opp_ls
+
 
 
 

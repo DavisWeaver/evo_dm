@@ -409,7 +409,8 @@ def compute_optimal_action(agent, policy, step, prev_action = False):
 #'main' function that iterates through simulations to train the agent
 def practice(agent, naive = False, standard_practice = False, 
              dp_solution = False, pre_trained = False, discount_rate = 0.99,
-             policy = "none", prev_action = False, wf = False):
+             policy = "none", prev_action = False, wf = False, train_freq = 100, 
+             compute_implied_policy_bool = False):
     '''
     Function that iterates through simulations to train the agent. Also used to test general drug cycling policies as controls for evodm 
     ...
@@ -431,6 +432,8 @@ def practice(agent, naive = False, standard_practice = False,
         encoding optimal actions a for all states s in S, defaults to "none" - 
         in which case logic defined by bools will dictate which policy is used. 
         If a policy is provided, it will supercede all other options and be tested
+    train_freq: int
+        how many time steps should pass between training the model. 
 
     Returns rewards, agent, policy 
         reward vector, trained agent including master memory dictating what happened, and learned policy (if applicable)
@@ -451,9 +454,9 @@ def practice(agent, naive = False, standard_practice = False,
     reward_list = []
     #initialize list of per episode rewards
     ep_rewards = []
+    count=1
     for episode in tqdm(range(1, agent.hp.EPISODES + 1), ascii=True, unit='episodes', 
                         disable = True if any([dp_solution, naive, pre_trained]) else False):
-
         # Restarting episode - reset episode reward and step number
         episode_reward = 0
         if pre_trained:
@@ -508,11 +511,18 @@ def practice(agent, naive = False, standard_practice = False,
 
             # Every step we update replay memory and train main network - only train if we are doing a not naive run
             agent.update_replay_memory()
+
             if not any([dp_solution, naive, pre_trained]):
-                agent.train()
-            
+                if count % train_freq == 0: #this will prevent us from training every freaking time step
+                    agent.train()
+                    if train_freq > agent.hp.RESET_EVERY and compute_implied_policy_bool:
+                        if not agent.hp.NUM_EVOLS > 1:
+                            agent.compute_implied_policy(update = True)
+
             if agent.env.done: # break if either of the victory conditions are met
                 break #check out calc_reward in the evol_env class for how this is defined
+
+            count +=1 #keep track of total number of time steps that pass
 
         # Append episode reward to a list and log stats (every given number of episodes)
         ep_rewards.append(episode_reward)
@@ -525,8 +535,9 @@ def practice(agent, naive = False, standard_practice = False,
 
             #update the implied policy vector
             if not any([dp_solution, naive, pre_trained]):
-                if not agent.hp.NUM_EVOLS > 1:
-                    agent.compute_implied_policy(update = True)
+                if not agent.hp.NUM_EVOLS > 1 and compute_implied_policy_bool:
+                    if not train_freq > agent.hp.RESET_EVERY:
+                        agent.compute_implied_policy(update = True)
 
             # Save model, but only when min reward is greater or equal a set value
             # haven't figured out what min reward is for that
@@ -550,9 +561,12 @@ def practice(agent, naive = False, standard_practice = False,
     elif pre_trained:
         policy = []
         V=[]
-    else:
+    elif compute_implied_policy_bool:
         policy = agent.compute_implied_policy(update = False)
         V=[]
+    else:
+        policy = []
+        V = []
     return reward_list, agent, policy, V
 
 

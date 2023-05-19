@@ -9,7 +9,6 @@ evodm/exp.py
 evodm/hgt_exp.py
 evodm/landscapes.py
 evodm/learner.py
-evodm/prof_practice.py
 evodm.egg-info/PKG-INFO
 evodm.egg-info/SOURCES.txt
 evodm.egg-info/dependency_links.txt

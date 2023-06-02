@@ -12,7 +12,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
                   train_input = "fitness",  random_start = False, 
                   noise = False, noise_modifier = 1, num_drugs = 4, 
                   sigma = 0.5, normalize_drugs = True, 
-                  player_wcutoff = 0.1, pop_wcutoff = 0.99, win_threshold = 200,
+                  player_wcutoff = -1, pop_wcutoff = 2, win_threshold = 200,
                   win_reward = 0, standard_practice = False, drugs = "none",
                   average_outcomes = False, mira = False, gamma = 0.99,
                   learning_rate = 0.0001, minibatch_size = 60, 
@@ -108,8 +108,8 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
     hp.STARTING_GENOTYPE = int(starting_genotype)
     hp.WF = wf
     hp.MUTATION_RATE = mutation_rate
-    hp.GEN_PER_STEP = gen_per_step
-    hp.POP_SIZE = pop_size
+    hp.GEN_PER_STEP = int(gen_per_step)
+    hp.POP_SIZE = int(pop_size)
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes

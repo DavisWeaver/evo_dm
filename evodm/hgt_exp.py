@@ -93,7 +93,7 @@ def summarize_wf_hgt(N=5, sigma = 0.5, num_drugs = 5, pop_size = 10000,
     env = evol_env_wf(N =N, num_drugs = num_drugs, pop_size = pop_size, 
                       gen_per_step=gen_per_step,
                       mutation_rate=mutation_rate, hgt_rate = hgt_rate,
-                       drugLandscape=drugs)
+                      drugLandscape=drugs)
     
     env.drug = get_example_drug(N=N)
     #a procedurally generated drug landscape where the best allele is very far from the starting point

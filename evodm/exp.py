@@ -121,7 +121,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
         return [rewards, agent, policy]
         
     if mira:
-        hp.NORMALIZE_DRUGS = True
+        #hp.NORMALIZE_DRUGS = True
         drugs = define_mira_landscapes()
     #initialize agent, including the updated hyperparameters
     agent = DrugSelector(hp = hp, drugs = drugs)

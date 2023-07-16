@@ -1,6 +1,5 @@
 from evodm.evol_game import *
 from evodm.landscapes import Landscape
-from copy import deepcopy
 from mdptoolbox.mdp import FiniteHorizon
 import numpy as np
 
@@ -21,12 +20,12 @@ class dp_env:
     """
     def __init__(self, N, sigma, 
                  correl = np.linspace(-1.0,1.0,51), 
-                 num_drugs = 4, drugs = "none"):
+                 num_drugs = 4, drugs = "none", noinit = False):
         #define the drugs if there aren't any
         if drugs == "none":
             ## Generate landscapes - use whatever parameters were set in main()
             landscapes = generate_landscapes(N = N, sigma = sigma,
-                                              correl = correl)
+                                              correl = correl, dense = False)
 
             ## Select landscapes corresponding to 4 different drug regimes
             drugs = define_drugs(landscapes, num_drugs = num_drugs)
@@ -35,22 +34,28 @@ class dp_env:
         
         self.drugs = drugs #need these later to compute reward
         #define the landscapes
-        landscapes = [Landscape(ls = i, N=N, sigma = sigma) for i in drugs]
+        landscapes = [Landscape(ls = i, N=N, sigma = sigma, dense = False) for i in drugs]
         #get the transition matrix for each landscape
         self.tm = [i.get_TM() for i in landscapes]
         
         #get number of states
         self.nS = pow(2,N)
         self.nA = num_drugs
+
+        #define initial state distribution
+        self.isd = np.zeros(self.nS)
+        self.isd[0] = 1
+
+        if noinit:
+            return
+        
         #define P
-        self.P = self.define_P()
+        #self.P = self.define_P()
         #define R
         self.R = self.define_R()
         self.tm = self.clean_tm()
         
-        #define initial state distribution
-        self.isd = np.zeros(self.nS)
-        self.isd[0] = 1
+        
     
     def define_P(self):
         """

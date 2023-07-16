@@ -2,6 +2,7 @@ import numpy as np
 import scipy.linalg as la
 import scipy.optimize as op
 from scipy.stats import pearsonr
+import scipy.sparse as sparse
 import copy
 import math
 import itertools
@@ -57,10 +58,12 @@ class Landscape:
     get_steadystate_rounds(correl)
         Calculates number of steps to reach steady state for paired landscape evolution
     """
-    def __init__(self, N, sigma, ls=None, parent=None, num_jumps = 1):
+    def __init__(self, N, sigma, ls=None, parent=None, num_jumps = 1, dense = False,
+                 compute_tm=False):
         """
         Initializes landscape objects with given N and sigma to simulate epistasis (zero sigma produces an additive landscape with exactly one global maximum).
         """
+        self.dense = dense
         self.N = N
         self.sigma = sigma
         self.Bs = None
@@ -74,8 +77,11 @@ class Landscape:
             self.ls = self.ls + noise                                    # Adds gaussian generated noise to A landscape at each A genotype
         else: self.ls = ls
         if parent is not None: self.parent = parent
+        
+        if compute_tm:
+            self.get_TM(store=True)
 
-    def get_TM(self, store=False, update = False):
+    def get_TM(self, store=True, update = False):
         """
         Returns the transition matrix for this landscape. If store=True, it will
         be saved in a field of this object (TM) for later use. If a stored copy already
@@ -88,8 +94,12 @@ class Landscape:
         new code:  fitter = list(filter(lambda x: (adjFit[x]-self.ls[i]) > 0.00001, mut))
         """
         if not hasattr(self, 'TM') and not update: #give the option to update the transition matrix of a given landscape
-            mut = range(self.N)                                               # Creates a list (0, 1, ..., N) to call for bitshifting mutations.
-            TM = np.zeros((2**self.N,2**self.N))                                   # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
+            mut = range(self.N)  
+            if self.dense:
+                TM = np.zeros((2**self.N,2**self.N))
+            else:                                             # Creates a list (0, 1, ..., N) to call for bitshifting mutations.
+                #build up the matrix using a lil array to save compute when constructing the matrix
+                TM = sparse.lil_array((2**self.N,2**self.N)) # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
 
             for i in range(2**self.N):
                                      # For the current genotype i, creates list of genotypes that are 1 mutation away.
@@ -100,11 +110,12 @@ class Landscape:
 
                 fitLen = len(fitter)
                 if fitLen == 0:                                          # If no mutations are more fit, stay in current genotype.
-                    TM[i][i] = 1
+                    TM[i, i] = 1
                 else:
                     tranVal = 1.0 / fitLen                                                   # If at least one mutation is more fit, assign a fitness of 1/(# of more fit mutatnts) to each accessible genotype.
                     for f in fitter:
-                        TM[f][i] = tranVal
+                        TM[f,i] = tranVal
+            if not self.dense: TM = TM.tocsr() #convert to csr format for faster matrix multiplication
             if store: self.TM = TM # store the transition matrix for this landscape object
             return TM
         else: return self.TM
@@ -146,7 +157,7 @@ class Landscape:
         """
         if not hasattr(self, 'TM'):
             mut = range(self.N)                                               # Creates a list (0, 1, ..., N) to call for bitshifting mutations.
-            TM = np.zeros((2**self.N,2**self.N))                              # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
+            TM = sparse.csr_array((2**self.N,2**self.N))                              # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
 
             for i in range(2**self.N):
                 adjMut = [i ^ (1 << m) for m in mut]                          # For the current genotype i, creates list of genotypes that are 1 mutation away.
@@ -157,13 +168,13 @@ class Landscape:
 
                 fitLen = len(fitter)
                 if fitLen == 0:                                               # If no mutations are more fit, stay in current genotype.
-                    TM[i][i] = 1
+                    TM[i,i] = 1
                 else:
                     dfit = np.power([adjFit[f] - self.ls[i] for f in fitter], phenom)
                     prob_mut = np.divide(dfit,np.sum(dfit))
                     count = 0
                     for f in fitter:
-                        TM[adjMut[f]][i] = prob_mut[count]
+                        TM[adjMut[f],i] = prob_mut[count]
                         count += 1
             if store: self.TM = TM # store the transition matrix for this landscape object
             return TM
@@ -177,7 +188,7 @@ class Landscape:
         """
         if not hasattr(self, 'TM'):
             mut = range(self.N)                                               # Creates a list (0, 1, ..., N) to call for bitshifting mutations.
-            TM = np.zeros((2**self.N,2**self.N))                              # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
+            TM = sparse.csr_array((2**self.N,2**self.N))                              # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
 
             for i in range(2**self.N):
                 adjMut = [i ^ (1 << m) for m in mut]                          # For the current genotype i, creates list of genotypes that are 1 mutation away.
@@ -188,10 +199,10 @@ class Landscape:
 
                 fitLen = len(fitter)
                 if fitLen == 0:                                               # If no mutations are more fit, stay in current genotype.
-                    TM[i][i] = 1
+                    TM[i,i] = 1
                 else:
                     fitMax = np.argmax(adjFit)
-                    TM[adjMut[fitMax]][i] = 1
+                    TM[adjMut[fitMax],i] = 1
 
             if store: self.TM = TM # store the transition matrix for this landscape object
             return TM
@@ -286,12 +297,27 @@ class Landscape:
                 mins.append(i)
         return mins
 
-    def evolve(self, steps, p0, store_TM=False):
+    def evolve(self, steps, p0):
         """
         Returns an array of genotype occupation probabilities after stepping in
         this landscape steps times.
         """
-        TM = self.get_TM(store_TM)
+        TM = self.get_TM()
+        if p0 is not None:
+            self.p0 = p0
+        else:
+            p0 = sparse.csr_array((2**self.N,1))
+            p0[0,0] = 1
+        
+        TM_stepped = TM ** steps
+        return TM_stepped.dot(p0)
+
+    def evolve_dense(self, steps, p0):
+        """
+        Returns an array of genotype occupation probabilities after stepping in
+        this landscape steps times. *This version uses dense matrices
+        """
+        TM = self.get_TM()
         if p0 is not None:
             self.p0 = p0
         else:

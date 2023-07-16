@@ -332,9 +332,10 @@ def s_solve(y):
         return x
 
 #additional methods used by prep_environ. too lazy to make them part of the class
-def generate_landscapes(N = 5, sigma = 0.5, correl = np.linspace(-1.0,1.0,51)):
+def generate_landscapes(N = 5, sigma = 0.5, correl = np.linspace(-1.0,1.0,51), 
+                        dense = False):
 
-    A = Landscape(N, sigma)
+    A = Landscape(N, sigma, dense = dense)
     Bs = A.generate_correlated_landscapes(correl)
 
     return Bs

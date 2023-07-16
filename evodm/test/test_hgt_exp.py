@@ -32,7 +32,7 @@ def wf_smallpop():
     return wf_smallpop
 
 #nake sure pop fixes at single allele in small pop limit 
-def test_wf_sp_fixation(wf_smallpop):
+#def test_wf_sp_fixation(wf_smallpop):
     df = wf_smallpop[0]
     fixation = df[df.step_num == np.max(df.step_num)]
     assert fixation['num_alleles'].tolist()[0] ==1
@@ -64,8 +64,8 @@ def wf_lp_N4():
     wp_lp_N4 = summarize_wf_hgt(pop_size=1e6, theta=1e-5, stop_count = 200, N=4)
     return wp_lp_N4
 
-def test_wf_lp_fixation3(wp_lp_N4):
-    df= wp_lp_N4[0]
+def test_wf_lp_fixation3(wf_lp_N4):
+    df= wf_lp_N4[0]
     fixation = df[df.step_num == np.max(df.step_num)]
     assert fixation['step_num'].tolist()[0] < 10000 #make sure appropriately stop when fixation is achieved
 

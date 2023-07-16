@@ -11,7 +11,7 @@ setup(
       "keras~=2.6.0",
       "numpy",
       "tqdm",
-      "scipy", 
+      "scipy>=1.9.0", 
       "networkx", 
       "pytest", 
       "pymdptoolbox", 

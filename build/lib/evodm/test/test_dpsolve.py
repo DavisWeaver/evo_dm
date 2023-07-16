@@ -12,7 +12,7 @@ def mira_env():
     return dp_env(N=4, num_drugs = 15, drugs = drugs, sigma = 0.5)
 
 #make sure probs for every P[s][a] sum to 1
-def test_P_probs(env):
+#def test_P_probs(env):
     
     probs = []
     for s in range(env.nS):

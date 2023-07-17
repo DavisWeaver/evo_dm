@@ -8,7 +8,7 @@ setup(
     packages=['evodm', "evodm.test"], 
     install_requires = [
       "protobuf~=3.20.3",
-      "tensorflow~=2.12.0", 
+      "tensorflow~=2.11.0", 
       "numpy",
       "tqdm",
       "scipy", 

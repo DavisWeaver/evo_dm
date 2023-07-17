@@ -12,7 +12,6 @@ from evodm.evol_game import evol_env, evol_env_wf
 from evodm.dpsolve import backwards_induction, dp_env
 import random
 import numpy as np 
-from tqdm import tqdm
 from copy import deepcopy
 
 # Function to set hyperparameters for the learner - just edit this any time you
@@ -455,8 +454,7 @@ def practice(agent, naive = False, standard_practice = False,
     #initialize list of per episode rewards
     ep_rewards = []
     count=1
-    for episode in tqdm(range(1, agent.hp.EPISODES + 1), ascii=True, unit='episodes', 
-                        disable = True if any([dp_solution, naive, pre_trained]) else False):
+    for episode in range(1, agent.hp.EPISODES + 1):
         # Restarting episode - reset episode reward and step number
         episode_reward = 0
         if pre_trained:

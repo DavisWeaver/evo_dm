@@ -13,6 +13,7 @@ from evodm.dpsolve import backwards_induction, dp_env
 import random
 import numpy as np 
 from copy import deepcopy
+from tqdm import tqdm 
 
 # Function to set hyperparameters for the learner - just edit this any time you
 # want to screw around with them.
@@ -216,8 +217,8 @@ class DrugSelector:
         #get the current states
         current_states, new_current_states = self.get_current_states(minibatch = minibatch)
 
-        current_qs_list = self.model.predict(current_states)
-        future_qs_list = self.target_model.predict(new_current_states)
+        current_qs_list = self.model.predict(current_states, verbose = 0)
+        future_qs_list = self.target_model.predict(new_current_states, verbose = 0)
 
         
         # Now we need to enumerate our batches
@@ -333,7 +334,7 @@ class DrugSelector:
                     #reshape to feed into the model
                     tens = a_vec.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
                     #find the optimal action
-                    action_a = self.model.predict(tens)[0].argmax()
+                    action_a = self.model.predict(tens, verbose = 0)[0].argmax()
             
                     a_out.append(action_a)
                     
@@ -358,7 +359,7 @@ class DrugSelector:
         else: 
             return "error in get_qs()"
 
-        return self.model.predict(tens)[0]
+        return self.model.predict(tens, verbose = 0)[0]
     
 def compute_optimal_policy(agent, discount_rate = 0.99, num_steps = 20):
     '''
@@ -454,7 +455,8 @@ def practice(agent, naive = False, standard_practice = False,
     #initialize list of per episode rewards
     ep_rewards = []
     count=1
-    for episode in range(1, agent.hp.EPISODES + 1):
+    for episode in tqdm(range(1, agent.hp.EPISODES + 1), ascii=True, unit='episodes', 
+                        disable = True if any([dp_solution, naive, pre_trained]) else False):
         # Restarting episode - reset episode reward and step number
         episode_reward = 0
         if pre_trained:

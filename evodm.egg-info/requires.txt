@@ -4,6 +4,7 @@ numpy
 scipy
 networkx
 pytest
+tqdm
 pymdptoolbox
 pandas
 matplotlib

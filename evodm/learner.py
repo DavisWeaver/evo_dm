@@ -409,7 +409,7 @@ def compute_optimal_action(agent, policy, step, prev_action = False):
 #'main' function that iterates through simulations to train the agent
 def practice(agent, naive = False, standard_practice = False, 
              dp_solution = False, pre_trained = False, discount_rate = 0.99,
-             policy = "none", prev_action = False, wf = False, train_freq = 100, 
+             policy = "none", prev_action = False, wf = False, train_freq = 1, 
              compute_implied_policy_bool = False):
     '''
     Function that iterates through simulations to train the agent. Also used to test general drug cycling policies as controls for evodm 

@@ -127,6 +127,28 @@ class evol_env:
                 print("please specify state_vector, pop_size, or fitness for train_input when initializing the environment")
                 return
 
+    def define_landscapes(self, drugs, normalize_drugs = True):
+        #default behavior is to generate landscapes completely at random. 
+        #define landscapes #this step is a beast - let's pull this out into it's own function
+        if drugs == "none": 
+            ## Generate landscapes - use whatever parameters were set in main()
+            self.landscapes = generate_landscapes(N = self.N, 
+                                                  sigma = self.sigma,
+                                                  correl = self.correl)
+            
+            ## Select landscapes corresponding to 4 different drug regimes
+            self.drugs = [i.ls for i in self.landscapes]
+        else:
+            self.drugs = drugs #use pre-defined drugs 
+            self.landscapes = [Landscape(ls = i, N=self.N, sigma = self.sigma) for i in self.drugs]
+
+        #Normalize landscapes if directed
+        if normalize_drugs:
+            self.drugs = normalize_landscapes(self.drugs)
+            self.landscapes = [Landscape(ls = i, N=self.N, sigma = self.sigma) for i in self.drugs]
+        
+        [i.get_TM() for i in self.landscapes] #pre-compute TM
+        
 
     def step(self):
 

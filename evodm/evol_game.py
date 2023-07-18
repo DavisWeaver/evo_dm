@@ -33,7 +33,8 @@ class evol_env:
                         add_noise = True, 
                         average_outcomes = False, 
                         total_resistance = False,
-                        starting_genotype = 0):
+                        starting_genotype = 0, 
+                        dense= False, cs = False):
         #define switch for whether to record the state vector or fitness for the learner
         self.TRAIN_INPUT = train_input
         #define environmental variables
@@ -50,6 +51,7 @@ class evol_env:
         self.action = 1 #first action - value will be updated by the learner
         self.prev_action = 1.0 #pretend this is the second time seeing it why not
         self.update_target_counter = 0
+        
 
         #should noise be introduced into the fitness readings?
         self.NOISE_MODIFIER = noise_modifier
@@ -60,8 +62,12 @@ class evol_env:
         #data structure for containing information the agent queries from the environment.
         # the format is: [previous_fitness, current_action, reward, next_fitness]
         self.sensor =  []
+        #save environment variables
         self.N = N
         self.sigma = sigma
+        self.DENSE= dense
+        self.CS = cs
+        self.num_drugs = num_drugs
        
         #Defining these in case self.reset is called
         self.correl = correl
@@ -86,21 +92,7 @@ class evol_env:
         self.RANDOM_START = random_start
         self.TOTAL_RESISTANCE = total_resistance
 
-        #define landscapes
-        if drugs == "none": 
-
-            ## Generate landscapes - use whatever parameters were set in main()
-            self.landscapes = generate_landscapes(N = N, sigma = sigma,
-                                              correl = correl)
-
-            ## Select landscapes corresponding to 4 different drug regimes
-            self.drugs = define_drugs(self.landscapes, num_drugs = num_drugs)
-        else:
-            self.drugs = drugs #use pre-defined drugs 
-
-        #Normalize landscapes if directed
-        if normalize_drugs:
-            self.drugs = normalize_landscapes(self.drugs)
+        self.define_landscapes(drugs=drugs, normalize_drugs=normalize_drugs)
 
         ##initialize state vector
         if self.RANDOM_START:
@@ -126,6 +118,32 @@ class evol_env:
         else:
                 print("please specify state_vector, pop_size, or fitness for train_input when initializing the environment")
                 return
+
+    def define_landscapes(self, drugs, normalize_drugs):
+        #default behavior is to generate landscapes completely at random. 
+        #define landscapes #this step is a beast - let's pull this out into it's own function
+        if drugs == "none": 
+            ## Generate landscapes - use whatever parameters were set in main()
+            self.landscapes, self.drugs = generate_landscapes(N = self.N, 
+                                                  sigma = self.sigma,
+                                                  num_drugs = self.num_drugs,
+                                                  correl=self.correl, dense = self.DENSE,
+                                                  CS=self.CS)
+            
+        else:
+            self.drugs = drugs #use pre-defined drugs 
+            self.landscapes = [Landscape(ls = i, N=self.N, sigma = self.sigma, 
+                                         dense = self.DENSE) for i in self.drugs]
+
+        #Normalize landscapes if directed
+        if normalize_drugs:
+            self.drugs = normalize_landscapes(self.drugs)
+            self.landscapes = [Landscape(ls = i, N=self.N, sigma = self.sigma,
+                                         dense = self.DENSE) for i in self.drugs]
+        
+        [i.get_TM() for i in self.landscapes] #pre-compute TM
+        
+        return 
 
 
     def step(self):
@@ -333,25 +351,22 @@ def s_solve(y):
 
 #additional methods used by prep_environ. too lazy to make them part of the class
 def generate_landscapes(N = 5, sigma = 0.5, correl = np.linspace(-1.0,1.0,51), 
-                        dense = False):
+                        dense = False, CS = False, num_drugs = 4):
 
     A = Landscape(N, sigma, dense = dense)
     Bs = A.generate_correlated_landscapes(correl)
 
-    return Bs
-
-def define_drugs(landscape_to_keep, num_drugs = 4, CS = False):
-
     if CS: 
         #this code guarantees that high-level CS will be present 
-        split_index = np.array_split(range(len(landscape_to_keep)), num_drugs)
+        split_index = np.array_split(range(len(Bs)), num_drugs)
         keep_index = [round(np.median(i)) for i in split_index]
     else:
-        keep_index = np.random.randint(0, len(landscape_to_keep)-1, size = num_drugs)
-    #grab the 'drug landscapes'
-    drugs = [landscape_to_keep[i].ls for i in keep_index]
+        keep_index = np.random.randint(0, len(Bs)-1, size = num_drugs)
+    
+    landscapes = [Bs[i] for i in keep_index]
+    drugs = [i.ls for i in landscapes]
 
-    return drugs
+    return landscapes, drugs
 
     #pprint.pprint(drugs)           output all the drugs
     #pprint.pprint(drugs[3,0])      output the fitness of genotype 4 in drug 1.

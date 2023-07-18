@@ -7,7 +7,7 @@ from itertools import combinations
 from evodm.est_growth_rates import * 
 import pickle
 
-def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
+def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 60,
                   reset_every = 20, min_epsilon = 0.005, 
                   train_input = "fitness",  random_start = False, 
                   noise = False, noise_modifier = 1, num_drugs = 4, 
@@ -22,7 +22,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
                   pop_size = 10000,
                   agent = "none",
                   update_target_every = 310, total_resistance = False, 
-                  starting_genotype = 0, train_freq = 100, 
+                  starting_genotype = 0, train_freq = 1, 
                   compute_implied_policy_bool = False):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs

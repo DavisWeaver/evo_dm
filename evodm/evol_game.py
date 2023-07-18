@@ -368,6 +368,15 @@ def generate_landscapes(N = 5, sigma = 0.5, correl = np.linspace(-1.0,1.0,51),
 
     #pprint.pprint(drugs)           output all the drugs
     #pprint.pprint(drugs[3,0])      output the fitness of genotype 4 in drug 1.
+def generate_landscapes2(N=4, sigma=0.5, num_drugs=4, CS = False, dense = False, correl = None):
+    #this in theory should be much cheaper than generate_landscapes which ensures 
+    # that there are a range of correlations between the returned landscapes
+    landscapes = []
+    for i in range(num_drugs):
+        landscapes.append(Landscape(N, sigma))
+
+    drugs = [i.ls for i in landscapes]
+    return landscapes, drugs
 
 def normalize_landscapes(drugs):
     drugs_normalized = []

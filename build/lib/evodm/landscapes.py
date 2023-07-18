@@ -461,6 +461,7 @@ class Landscape:
         """ 
         generates correlated landscapes according to the np.linspace specified in 'correl'
         """
+        
         Bs = [None]*len(correl)
         Astd = np.std(self.ls, ddof=1) # have to use ddof=1 to match matlab sample std
         Amean = np.mean(self.ls)
@@ -495,6 +496,25 @@ class Landscape:
                 y = y0 + beta * (x-y0)
                 y = Amean + y * Astd
                 Bs[i] = Landscape(self.N, self.sigma, ls=y.T, parent=self)
+        
+        count = 0
+        for B in Bs:
+            temp_landscape = Landscape(self.N, self.sigma)
+            sorted_temp = np.sort(temp_landscape.ls)
+
+            sorted_self = np.sort(B.ls)
+
+            final_landscape = np.empty((2**self.N))
+
+            for i in range(2**self.N):
+                index = np.where(B.ls == sorted_self[i])[0]
+                #index = next((i for i, x in enumerate(self.ls) if x == sorted_self[i]), None)
+
+                final_landscape[index] = sorted_temp[i]
+
+            Bs[count].ls = copy.deepcopy(final_landscape)
+            count += 1
+
         return Bs
 
     def calc_nonzero_steadystate_prob(self, steps):

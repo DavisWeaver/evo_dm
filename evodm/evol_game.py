@@ -157,11 +157,9 @@ class evol_env:
         # Run the sim under the assigned conditions
         if self.action not in self.ACTIONS:
             return("the action must be in env.ACTIONS")
-        fitness, state_vector = run_sim(evol_steps = self.NUM_EVOLS, N = self.N,
-                                        sigma = self.sigma,
+        fitness, state_vector = run_sim(evol_steps = self.NUM_EVOLS,
                                         state_vector = self.state_vector,
-                                        drugs = self.drugs, 
-                                        action = self.action, 
+                                        ls = self.landscapes[self.action-1], 
                                         average_outcomes=self.AVERAGE_OUTCOMES)
         if self.NOISE_BOOL:
             sensor_fitness = self.add_noise(fitness)
@@ -383,37 +381,28 @@ def normalize_landscapes(drugs):
 # Naive is a logical flag - set true to run the simulation in a naive case 
 # with random drug switching every 5th cycle 
 def discretize_state(state_vector):
-        '''
-        Helper Function to discretize state vector - 
-        converting the returned average outcomes to a single population trajectory.
-        '''
-        S = [i for i in range(len(state_vector))]
-        probs = state_vector.reshape(len(state_vector))
-        #choose one state - using the relative frequencies of the other states as the probabilities of being selected
-        state = np.random.choice(S, size = 1, p = probs) #pick a state for the whole p
-        new_states = np.zeros((len(state_vector),1))
-        new_states[state] = 1
-        return new_states
+    '''
+    Helper Function to discretize state vector - 
+    converting the returned average outcomes to a single population trajectory.
+    '''
+    S = [i for i in range(len(state_vector))]
+    probs = state_vector.reshape(len(state_vector))
+    #choose one state - using the relative frequencies of the other states as the probabilities of being selected
+    state = np.random.choice(S, size = 1, p = probs) #pick a state for the whole p
+    new_states = np.zeros((len(state_vector),1))
+    new_states[state] = 1
+    return new_states
 
 
-def run_sim(evol_steps, N, sigma, state_vector, drugs, action, 
-            average_outcomes = False):
+def run_sim(evol_steps, ls, state_vector, average_outcomes = False):
     '''
     Function to progress evolutionary simulation forward n times steps in a given fitness regime defined by action
 
     Args
         evol_steps: int
             number of steps
-        N: int
-            number of genotypes for the sims
-        sigma: float
-            constant defining the degree of epistasis on the landscapes
         state_vector: array
             N**2 length array defining the position of the population in genotype space
-        drugs: list of lists
-            list of n fitness landscapes representing different drug regimes
-        action: int
-            which drug was selected
         average_outcomes bool
             should all possible futures be averaged into the state vector or should 
             we simulate a single evolutionary trajectory? defaults to False
@@ -424,18 +413,14 @@ def run_sim(evol_steps, N, sigma, state_vector, drugs, action,
     reward = []
     # Evolve for 100 steps.
     for i in range(evol_steps):
-
-        # Creates a Landscape object for convenient manipulation and evolution
-        landscape_to_evolve = Landscape(N, sigma, ls=drugs[action-1]) #-1 so that it handles pythons stupid dumb indexing system
-
         # This is the fitness of the population when the drug is selected to be used.
         if not average_outcomes: 
             state_vector = discretize_state(state_vector)
 
-        reward.append(np.dot(landscape_to_evolve.ls,state_vector))  
+        reward.append(np.dot(ls.ls,state_vector))  
 
-        # Performs a single evolution step 
-        state_vector = landscape_to_evolve.evolve(1, p0=state_vector)
+        # Performs a single evolution step - TM should be stored in the landscape object
+        state_vector = ls.evolve(1, p0=state_vector)
         
     if not average_outcomes:
         state_vector = discretize_state(state_vector) #discretize again before sending it back

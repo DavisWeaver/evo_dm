@@ -30,4 +30,9 @@ def test_evol_deepmind_wf2():
     out = evol_deepmind(wf = True, train_input='fitness', episodes=5, 
                         num_drugs = 15, N=4, mira=True, 
                         normalize_drugs=False)
-    
+
+def test_evol_deepmind_sparse():
+    out = evol_deepmind(dense= False, train_input='fitness', episodes=5, reset_every=10)
+    agent = out[2]
+    assert agent.env.landscapes[0].get_TM().size < 4**agent.env.N
+    assert len(agent.master_memory) == 50

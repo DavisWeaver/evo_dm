@@ -23,7 +23,8 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
                   agent = "none",
                   update_target_every = 310, total_resistance = False, 
                   starting_genotype = 0, train_freq = 100, 
-                  compute_implied_policy_bool = False):
+                  compute_implied_policy_bool = False,
+                  dense = False):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
     to try and minimize the fitness of a population evolving on a landscape.
@@ -110,6 +111,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
     hp.MUTATION_RATE = mutation_rate
     hp.GEN_PER_STEP = int(gen_per_step)
     hp.POP_SIZE = int(pop_size)
+    hp.DENSE = dense
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes

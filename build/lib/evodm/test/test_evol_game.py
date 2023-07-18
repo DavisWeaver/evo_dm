@@ -226,7 +226,7 @@ def test_run_sim2(env_mature):
 @pytest.fixture
 def example_landscapes():
 
-    landscapes, drugs = generate_landscapes(N=5, dense=True,num_drugs = 4)
+    landscapes, drugs = generate_landscapes(N=5, dense=True,num_drugs = 4, sigma=0.5)
     return [landscapes,drugs]
 
 def test_generate_landscapes(example_landscapes):
@@ -285,8 +285,6 @@ def test_init_dense():
     assert ls1.get_TM().size == 4**env.N
 
 
+def test_generate_landscapes():
+    landscapes, drugs = generate_landscapes(N=4, sigma=0.5, correl = np.linspace(-1.0,1.0,51), dense=False, CS=True, num_drugs=4)
 
-
-
-
-    

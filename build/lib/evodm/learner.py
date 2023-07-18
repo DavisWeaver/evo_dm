@@ -77,6 +77,7 @@ class hyperparameters:
         self.SIGMA = 0.5
         self.NORMALIZE_DRUGS = True # should fitness values for all landscapes be bound between 0 and 1?
         self.AVERAGE_OUTCOMES = False #should we use the average of infinite evolutionary sims or use a single trajectory?
+        self.DENSE = False #will transition matrix be stored in dense or sparse format?
         # new evolutionary "game" every n steps or n *num_evols total evolutionary movements
         self.RESET_EVERY = 20
         self.EPISODES = 500
@@ -149,7 +150,8 @@ class DrugSelector:
                                 noise_modifier= self.hp.NOISE_MODIFIER,
                                 average_outcomes=self.hp.AVERAGE_OUTCOMES, 
                                 starting_genotype = self.hp.STARTING_GENOTYPE,
-                                total_resistance= self.hp.TOTAL_RESISTANCE)
+                                total_resistance= self.hp.TOTAL_RESISTANCE,
+                                dense=self.hp.DENSE)
 
         # main model  # gets trained every step
         self.model = self.create_model()

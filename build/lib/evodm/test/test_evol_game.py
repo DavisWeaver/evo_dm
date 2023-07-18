@@ -180,10 +180,9 @@ def test_env_reset(popsize_env):
 
 #lets test the standalone functions
 def test_run_sim(env_init):
-    fitness, state_vector = run_sim(evol_steps = env_init.NUM_EVOLS, N = env_init.N,
-                                           sigma = env_init.sigma,
-                                           state_vector = env_init.state_vector,
-                                           drugs = env_init.drugs, action = env_init.action)
+    fitness, state_vector = run_sim(evol_steps = env_init.NUM_EVOLS,
+                                    state_vector = env_init.state_vector,
+                                    ls = env_init.landscapes[env_init.action-1])
     if len(fitness) == 1:
         checkfitness = 0 <= fitness <= 1
     else:
@@ -213,10 +212,9 @@ def test_discretize_state3():
 
 #make sure it can go without averaging the evolutionary outcomes.
 def test_run_sim2(env_mature):
-    fitness, state_vector = run_sim(evol_steps = env_mature.NUM_EVOLS, N = env_mature.N,
-                                           sigma = env_mature.sigma,
+    fitness, state_vector = run_sim(evol_steps = env_mature.NUM_EVOLS,
                                            state_vector = env_mature.state_vector,
-                                           drugs = env_mature.drugs, action = env_mature.action, 
+                                           ls = env_mature.landscapes[env_mature.action-1], 
                                            average_outcomes=False)
     if len(fitness) == 1:
         checkfitness = 0 <= fitness <= 1

@@ -18,7 +18,7 @@ class evol_env:
     #intialize the environment class - key variable is "train_input"
     #train input determines whether the sensor records the state vector or
     #the previous fitnesses
-    def __init__(self, N = 5, sigma = 0.5, correl = np.linspace(-1.0,1.0,51),
+    def __init__(self,  drugs = None, N = 5, sigma = 0.5, correl = np.linspace(-1.0,1.0,51),
                         phenom = 0,
                         train_input = "state_vector", num_evols = 1,
                         random_start = False, 
@@ -28,7 +28,6 @@ class evol_env:
                         player_wcutoff = 0.8, 
                         pop_wcutoff = 0.95, 
                         win_reward = 10, 
-                        drugs = "none", 
                         noise_modifier = 1, 
                         add_noise = True, 
                         average_outcomes = False, 
@@ -122,7 +121,7 @@ class evol_env:
     def define_landscapes(self, drugs, normalize_drugs):
         #default behavior is to generate landscapes completely at random. 
         #define landscapes #this step is a beast - let's pull this out into it's own function
-        if drugs == "none": 
+        if drugs is None: 
             ## Generate landscapes - use whatever parameters were set in main()
             self.landscapes, self.drugs = generate_landscapes(N = self.N, 
                                                   sigma = self.sigma,

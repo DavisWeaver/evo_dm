@@ -109,7 +109,7 @@ class hyperparameters:
 # This is the class for the learning agent
 class DrugSelector:
     
-    def __init__(self, hp, drugs = "none"):
+    def __init__(self, hp, drugs= None):
         '''
         Initialize the DrugSelector class
         ...

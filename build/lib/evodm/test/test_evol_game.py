@@ -1,4 +1,4 @@
-from evodm import evol_env, generate_landscapes, define_drugs, normalize_landscapes, run_sim
+from evodm import evol_env, generate_landscapes, normalize_landscapes, run_sim
 from evodm.evol_game import discretize_state, define_mira_landscapes, evol_env_wf
 import pytest
 import numpy.testing as npt
@@ -227,20 +227,17 @@ def test_run_sim2(env_mature):
 #just make sure Jeff's code doesn't break while we're doing other things
 @pytest.fixture
 def example_landscapes():
-    return generate_landscapes(N=5)
+
+    landscapes, drugs = generate_landscapes(N=5, dense=True,num_drugs = 4)
+    return [landscapes,drugs]
 
 def test_generate_landscapes(example_landscapes):
-    assert len(example_landscapes) > 25
+    assert len(example_landscapes[0]) ==4
+    assert len(example_landscapes[1][0]) == pow(2,5)
 
-def test_define_drugs(example_landscapes):
-    #just check that there are 4 drugs vecs of length 2^5
-    drugs = define_drugs(example_landscapes, num_drugs = 4)
-    four_drugs = len(drugs) == 4
-    five_N = len(drugs[0]) == pow(2,5)
-    assert all([four_drugs, five_N])
 
 def test_normalize_landscapes(example_landscapes):
-    drugs = define_drugs(example_landscapes, num_drugs = 4)
+    drugs = example_landscapes[1]
     drugs = normalize_landscapes(drugs)
     maxes = [np.max(drug) <= 1 for drug in drugs]
     mins = [np.min(drug) >= 0 for drug in drugs] 
@@ -278,6 +275,16 @@ def mira_env_wf():
 
 def test_convert_fitness_wf(mira_env_wf, mira_env):
     assert len(mira_env_wf.sensor[0]) == len(mira_env.sensor[0])
+
+def test_init_sparse():
+    env = evol_env(dense=False)
+    ls1 = env.landscapes[0]
+    assert ls1.get_TM().size < 4**env.N
+
+def test_init_dense():
+    env = evol_env(dense=True)
+    ls1 = env.landscapes[0]
+    assert ls1.get_TM().size == 4**env.N
 
 
 

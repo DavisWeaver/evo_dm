@@ -24,11 +24,10 @@ class dp_env:
         #define the drugs if there aren't any
         if drugs == "none":
             ## Generate landscapes - use whatever parameters were set in main()
-            landscapes = generate_landscapes(N = N, sigma = sigma,
-                                              correl = correl, dense = False)
-
-            ## Select landscapes corresponding to 4 different drug regimes
-            drugs = define_drugs(landscapes, num_drugs = num_drugs)
+            landscapes, drugs = generate_landscapes(N = N, sigma = sigma,
+                                                    correl = correl, dense = False, 
+                                                    num_drugs=num_drugs)
+            
             ## Normalize landscapes
             drugs = normalize_landscapes(drugs)
         

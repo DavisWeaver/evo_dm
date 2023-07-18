@@ -1,5 +1,5 @@
 from evodm.landscapes import Landscape
-from evodm.evol_game import define_drugs, evol_env_wf, generate_landscapes, normalize_landscapes
+from evodm.evol_game import evol_env_wf, generate_landscapes, normalize_landscapes
 from evodm.data import get_example_drug
 import pandas as pd
 import numpy as np
@@ -86,8 +86,7 @@ def run_sim_hgt(max_evol_steps, ls):
 def summarize_wf_hgt(N=5, sigma = 0.5, num_drugs = 5, pop_size = 10000, 
                      gen_per_step = 20, mutation_rate = 1e-5, hgt_rate= 1e-5, 
                      theta = 1e-5, stop_count = 20):
-    ls = generate_landscapes(N=N, sigma = sigma)
-    drugs= define_drugs(landscape_to_keep = ls, num_drugs=num_drugs)
+    ls, drugs = generate_landscapes(N=N, sigma = sigma, num_drugs=num_drugs)
     drugs = normalize_landscapes(drugs) #can't have any non 0 fitnesses or everyone loses their gd mind
 
     env = evol_env_wf(N =N, num_drugs = num_drugs, pop_size = pop_size, 

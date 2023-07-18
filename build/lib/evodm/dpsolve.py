@@ -20,9 +20,9 @@ class dp_env:
     """
     def __init__(self, N, sigma, 
                  correl = np.linspace(-1.0,1.0,51), 
-                 num_drugs = 4, drugs = "none", noinit = False):
+                 num_drugs = 4, drugs = None, noinit = False):
         #define the drugs if there aren't any
-        if drugs == "none":
+        if drugs is None:
             ## Generate landscapes - use whatever parameters were set in main()
             landscapes, drugs = generate_landscapes(N = N, sigma = sigma,
                                                     correl = correl, dense = False, 

@@ -10,7 +10,7 @@ setup(
       "tensorflow~=2.11.0", 
       "numpy",
       "scipy>=1.8.0", 
-      "networkx", 
+      "networkx<2.7.0", 
       "pytest", 
       "tqdm",
       "pymdptoolbox", 

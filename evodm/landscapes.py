@@ -99,7 +99,7 @@ class Landscape:
                 TM = np.zeros((2**self.N,2**self.N))
             else:                                             # Creates a list (0, 1, ..., N) to call for bitshifting mutations.
                 #build up the matrix using a lil array to save compute when constructing the matrix
-                TM = sparse.lil_array((2**self.N,2**self.N)) # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
+                TM = sparse.lil_matrix((2**self.N,2**self.N)) # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
 
             for i in range(2**self.N):
                                      # For the current genotype i, creates list of genotypes that are 1 mutation away.
@@ -157,7 +157,7 @@ class Landscape:
         """
         if not hasattr(self, 'TM'):
             mut = range(self.N)                                               # Creates a list (0, 1, ..., N) to call for bitshifting mutations.
-            TM = sparse.csr_array((2**self.N,2**self.N))                              # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
+            TM = sparse.csr_matrix((2**self.N,2**self.N))                              # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
 
             for i in range(2**self.N):
                 adjMut = [i ^ (1 << m) for m in mut]                          # For the current genotype i, creates list of genotypes that are 1 mutation away.
@@ -188,7 +188,7 @@ class Landscape:
         """
         if not hasattr(self, 'TM'):
             mut = range(self.N)                                               # Creates a list (0, 1, ..., N) to call for bitshifting mutations.
-            TM = sparse.csr_array((2**self.N,2**self.N))                              # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
+            TM = sparse.csr_matrix((2**self.N,2**self.N))                              # Transition matrix will be sparse (most genotypes unaccessible in one step) so initializes a TM with mostly 0s to do most work for us.
 
             for i in range(2**self.N):
                 adjMut = [i ^ (1 << m) for m in mut]                          # For the current genotype i, creates list of genotypes that are 1 mutation away.
@@ -306,7 +306,7 @@ class Landscape:
         if p0 is not None:
             self.p0 = p0
         else:
-            p0 = sparse.csr_array((2**self.N,1))
+            p0 = sparse.csr_matrix((2**self.N,1))
             p0[0,0] = 1
         
         TM_stepped = TM ** steps

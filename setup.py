@@ -9,7 +9,7 @@ setup(
     install_requires = [
       "tensorflow~=2.11.0", 
       "numpy",
-      "scipy", 
+      "scipy>=1.8.0", 
       "networkx", 
       "pytest", 
       "tqdm",

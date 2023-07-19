@@ -10,7 +10,8 @@ source(here("R", "clean_evol_out.R"))
 source_python(here("load.py"))
 
 landscapes_test <- function(filename, episodes = 1000, train_input = "fitness", 
-                            mira = FALSE, iter = 1, reset_every = 20, starting_position) {
+                            mira = FALSE, iter = 1, reset_every = 20, starting_position, 
+                            train_freq = 100, compute_implied_policy_bool = FALSE) {
   
   #load the specified drug list
   if(mira) {
@@ -28,36 +29,58 @@ landscapes_test <- function(filename, episodes = 1000, train_input = "fitness",
   for(i in 1:n) {
     if(mira) {
       for(j in 1:iter) {
-          #run evodm
-          out <- evol_deepmind(num_evols = 1, N = N, episodes = episodes, 
-                               reset_every = reset_every, min_epsilon = 0.005, 
-                               train_input = train_input, 
-                               random_start = FALSE, 
-                               noise = TRUE, noise_modifier = 1, 
-                               num_drugs = num_drugs, 
-                               sigma = 0.5, 
-                               win_reward = 0, win_threshold = 50, 
-                               mira = mira, starting_genotype = starting_position) #set it up to have no win conditions
-          cleaned_out <- clean_out(out)
-          
-          #run agent through again to simulate performance/ policy over n additional episodes
-          agent <- out[[3]]
-          out2 <- evol_deepmind(agent = agent, pre_trained= TRUE)
-          agent <- out2[[2]]
-          df <- clean_memory(agent)
-          mems <- eval_policy_time(agent = agent)
-          #put it all together
-          out_list <- list(cleaned_out, df, mems)
-          save(
-            out_list, 
-            file = here("data", "results", 
-                        paste0("mira", i, "N", N, "D", num_drugs, "_", "reset", 
+        while(file.exists(here("data", "results", 
+                               paste0("mira", i, "N", N, "D", num_drugs, 
+                                      "_", "reset", 
+                                      reset_every, "_", 
+                                      ifelse(train_input == "fitness", "fit", "sv"), j, 
+                                      ".Rda"
+                               )))) {
+          j = j + iter
+        }
+        savepath = here("data", "results", 
+                        paste0("mira", i, "N", N, "D", num_drugs, 
+                               "_", "reset", 
                                reset_every, "_", 
                                ifelse(train_input == "fitness", "fit", "sv"), j, 
-                               ".Rda"
+                               ".p"
                         ))
-          )
+        #run evodm
+        out <- evol_deepmind(savepath=savepath, num_evols = 1, N = N, episodes = episodes, 
+                             reset_every = reset_every, min_epsilon = 0.005, 
+                             train_input = train_input, 
+                             random_start = FALSE, 
+                             noise = TRUE, noise_modifier = 1, 
+                             num_drugs = num_drugs, 
+                             sigma = 0.5, 
+                             win_reward = 0, win_threshold = 50, 
+                             mira = mira, starting_genotype = starting_position, 
+                             train_freq = train_freq, 
+                             compute_implied_policy_bool=compute_implied_policy_bool) #set it up to have no win conditions
+        cleaned_out <- clean_out(out, 
+                                 compute_implied_policy_bool=compute_implied_policy_bool)
+        
+        #run agent through again to simulate performance/ policy over n additional episodes
+        agent <- out[[3]]
+        out2 <- evol_deepmind(agent = agent, pre_trained= TRUE)
+        agent <- out2[[2]]
+        df <- clean_memory(agent)
+        if(compute_implied_policy_bool) {
+          mems <- eval_policy_time(agent = agent)
+          out_list <- list(cleaned_out, df, mems[[2]])
+        } else {
+          out_list <- list(cleaned_out, df)
         }
+        save(
+          out_list, 
+          file = here("data", "test", 
+                      paste0("mira", i, "N", N, "D", num_drugs, "_", "reset", 
+                             reset_every, "_", 
+                             ifelse(train_input == "fitness", "fit", "sv"), j, 
+                             ".Rda"
+                      ))
+        )
+      }
     } else {
       out <- evol_deepmind(num_evols = 1, N = N, episodes = episodes, 
                            reset_every = 20, min_epsilon = 0.005, 
@@ -67,20 +90,28 @@ landscapes_test <- function(filename, episodes = 1000, train_input = "fitness",
                            num_drugs = num_drugs, 
                            sigma = 0.5, 
                            win_reward = 0, win_threshold = 50, 
-                           drugs = drug_list[[i]], starting_genotype = starting_position) #set it up to have no win conditions
+                           drugs = drug_list[[i]], 
+                           starting_genotype = starting_position, 
+                           train_freq = train_freq, 
+                           compute_implied_policy_bool=compute_implied_policy_bool) #set it up to have no win conditions
       cleaned_out <- clean_out(out)
       
       agent <- out[[3]]
       out2 <- evol_deepmind(agent = agent, pre_trained= TRUE)
       agent <- out2[[2]]
       df <- clean_memory(agent)
-      mems <- eval_policy_time(agent = agent)
+      if(compute_implied_policy_bool) {
+        mems <- eval_policy_time(agent = agent)
+        out_list <- list(cleaned_out, df, mems[[2]])
+      } else {
+        out_list <- list(cleaned_out, df)
+      }
       #put it all together
-      out_list <- list(cleaned_out, df, mems)
+      
       #save everything
       save(
         out_list, 
-        file = here("data", "results", 
+        file = here("data", "test", 
                     paste0(
                       ifelse(str_detect(filename, "CS"), "CS", "random"),
                       "_landscape", i, "N", N, "D", num_drugs, "_", "reset", 
@@ -111,6 +142,6 @@ landscapes_test <- function(filename, episodes = 1000, train_input = "fitness",
 #run for mira landscapes
 landscapes_test(mira= TRUE, episodes = 500,
                 train_input = "fitness", iter = 100, reset_every = 20, 
-                starting_position = 15)
+                starting_position = 0, train_freq = 100)
 #landscapes_test(mira = TRUE, episodes = 1000,
 #                train_input = "state_vector")

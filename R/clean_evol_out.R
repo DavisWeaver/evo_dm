@@ -250,10 +250,16 @@ clean_out <- function(out) {
   
   #clean for the other conditions
   mem_df_naive <- clean_memory(agent_naive, steps = 150, pivot = TRUE)
-  mem_df_dp <- clean_memory(agent_dp, steps = 150, pivot = TRUE)
+  if(agent$hp$WF) {
+    mem_df_dp <- list()
+  } else {
+    mem_df_dp <- clean_memory(agent_dp, steps = 150, pivot = TRUE)
+    mem_df_dp$condition = "optimal_policy"
+  }
+  
   mem_df_naive$condition = "naive"
   mem_df$condition = "evodm"
-  mem_df_dp$condition = "optimal_policy"
+  
   
   df <- bind_rows(mem_df, mem_df_naive, mem_df_dp)
   

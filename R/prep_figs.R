@@ -1,7 +1,7 @@
 
 #Figure that looks at policies for a given agent
 prep_performance_overview <- function(N=5, landscapes = "random", files = NULL, 
-                                      lr_range= NULL, noise_exp = FALSE) {
+                                      lr_range= NULL, noise_exp = FALSE, policy_exists = TRUE, dir = "results") {
   
   
   add_filestring_vars <- function(file, df, noise_exp = FALSE) {
@@ -44,7 +44,7 @@ prep_performance_overview <- function(N=5, landscapes = "random", files = NULL,
   
   #check if the user provided a vector of filenames
   if(is.null(files)) {
-    files <- list.files(here("data", "results"), pattern = landscapes)
+    files <- list.files(here("data", dir), pattern = landscapes)
   }
   #omit the hyperparameter sweeps if we are looking to prep the mira heatmap figure
   if(landscapes == "mira") {
@@ -64,7 +64,7 @@ prep_performance_overview <- function(N=5, landscapes = "random", files = NULL,
   mems <- list()
   for(i in 1:length(files)) {
     #clean  the master_memory dataframes
-    load(here("data", "results", files[i]))
+    load(here("data", dir, files[i]))
     
     test <- try(out_list[[1]], silent = TRUE)
     if(inherits(test, 'try-error')) {
@@ -92,10 +92,6 @@ prep_performance_overview <- function(N=5, landscapes = "random", files = NULL,
     #df <- tidyr::pivot_wider(df, names_from = drug_regime, values_from = moving_prob)
     df_list[[i]] <- df
     
-    #join the policy dfs.
-    policy <- cleaned_out[[2]]
-    policy <- add_filestring_vars(file = files[i], df = policy, noise_exp = noise_exp)
-    #now handle the optimal policies
     opt_policy <- cleaned_out[[3]] %>% 
       as.data.frame() %>% 
       mutate(state = 1:nrow(cleaned_out[[3]])) %>% 
@@ -105,24 +101,62 @@ prep_performance_overview <- function(N=5, landscapes = "random", files = NULL,
                    values_to = "optimal_action") %>%
       mutate(action = as.numeric(action))
     
-    policy <- left_join(policy, opt_policy)
-    
-    policies[[i]] <- policy
-    
-    mems_i <- out_list[[3]]
-    mems_i <- add_filestring_vars(file = files[i], mems_i, noise_exp = noise_exp)
+    if(policy_exists) {
+      #join the policy dfs.
+      policy <- cleaned_out[[2]]
+      policy <- add_filestring_vars(file = files[i], df = policy, noise_exp = noise_exp)
+      #now handle the optimal policies
+      
+      policy <- left_join(policy, opt_policy)
+      
+      policies[[i]] <- policy
+      mems_i <- out_list[[3]]
+      mems_i <- add_filestring_vars(file = files[i], mems_i, noise_exp = noise_exp)
+    } else {
+      policies[[i]] <- NA
+      mems_i <-NA
+    }
     mems[[i]] <- mems_i
   }
   
   df <- bind_rows(df_list)
-  policies <- bind_rows(policies)
-  mems <- bind_rows(mems)
+  
+  if(policy_exists) {
+    policies <- bind_rows(policies)
+    mems <- bind_rows(mems)
+  }
   
   #more work to do with df
   return(list(df, policies, opt_policy, mems))
 }
 
-prep_mira_heatmap <- function(total_eps = 500, update = FALSE, noise_exp= FALSE) {
+clean_df <- function(df, total_eps = 500) {
+  df <- df %>% filter(!is.na(replicate), 
+                            condition != "evodm" | ep_number > total_eps) %>%
+    dplyr::mutate(episode = ifelse(ep_number>total_eps, ep_number-total_eps, ep_number)) %>%
+    mutate(replicate = as.numeric(replicate),
+           replicate_mod = as.numeric(replicate_mod),
+           replicate = replicate + (replicate_mod-1), 
+           replicate = ifelse(replicate > 100, replicate - 100, replicate))
+  
+  df <- df %>% 
+    filter((train_input != "sv" | train_input == "sv" & condition == "evodm")) %>% 
+    mutate(condition = ifelse(train_input == "sv", "evodm_sv", condition))
+  
+  df <- df  %>% 
+    group_by(replicate, condition, reset, episode, quadmut, totalres) %>% 
+    summarise(fitness = mean(average_fitness))
+  return(df)
+}
+
+prep_results <- function(total_eps = 500, N = 4, landscapes = "mira", policy_exists = FALSE, dir = "test") {
+  out <- prep_performance_overview(N=4, landscapes = "mira", policy_exists = FALSE, dir = "test")
+  df <- clean_df(out[[1]],total_eps = total_eps) 
+  return(df)
+}
+
+
+prep_mira_heatmap <- function(total_eps = 500, update = FALSE, noise_exp= FALSE, do_clustering=FALSE) {
   if(noise_exp) {
     if(file.exists("data/results/heatmap_raw_noise.Rda") & !update) {
       load("data/results/heatmap_raw_noise.Rda")
@@ -138,7 +172,6 @@ prep_mira_heatmap <- function(total_eps = 500, update = FALSE, noise_exp= FALSE)
       save(out, file = "data/results/heatmap_raw.Rda")
     }
   }
-  df <- out[[1]]
   
   #drug index table
   drug_index <- data.frame(action = 1:15, 
@@ -159,13 +192,14 @@ prep_mira_heatmap <- function(total_eps = 500, update = FALSE, noise_exp= FALSE)
     while(max(df$replicate) > 10) {
       df <- df %>% mutate(replicate = ifelse(replicate > 10, replicate - 10, replicate))
     }
-    
   }
   
   #set it up to include evodm_sv as a comparison group
   df <- df %>% 
     filter((train_input != "sv" | train_input == "sv" & condition == "evodm")) %>% 
     mutate(condition = ifelse(train_input == "sv", "evodm_sv", condition))
+  
+  df_sequences <- get_common_sequence(df)
   
   #bind all experimental conditions back together
   joint_probs_drug <- compute_joint_probability(df = df, num_drugs = 15)
@@ -260,7 +294,7 @@ prep_mira_heatmap <- function(total_eps = 500, update = FALSE, noise_exp= FALSE)
   
   #undo the bit we did earlier
   drug_index <- drug_index %>% mutate(action = action+1)
-  if(!noise_exp) {
+  if(!noise_exp & do_clustering) {
     #make mega drug index
     df_list <- list()
     counter = 0
@@ -312,7 +346,7 @@ prep_mira_heatmap <- function(total_eps = 500, update = FALSE, noise_exp= FALSE)
     mutate(replicate= as.numeric(replicate))
   
   out <- list(policies, df, df_long, df_full, opt_policy, joint_probs_drug, mems,
-              policies_state, joint_probs_state, df_orig, clusters, policies_state_clust)
+              policies_state, joint_probs_state, df_orig, clusters, policies_state_clust, df_sequences)
   
   return(out)
   #now compute 
@@ -359,6 +393,8 @@ cluster_policy <- function(df) {
     pc14 = pca_out$x[,14],
     pc15 = pca_out$x[,15]
   )
+  
+  df <- df %>% filter(replicate != 201) #don't use the MDP replicate here in the end
   
   #fviz_nbclust(df[,3:ncol(df)], FUNcluster = kmeans)
   km.res <- kmeans(df[,3:ncol(df)], centers = 5)
@@ -680,7 +716,7 @@ prep_network <- function(joint_prob) {
 }
 
 s2n<- function() {
-  noise_vec <- c(0,2,4,8,10,20,30,40,50,100)
+  noise_vec <- seq(0,100, by = 1)
   df <- signal2noise(noise_vec)
   df <- df %>% 
     mutate(s2nr = fitness / (fitness + abs(fitness - noisy_fitness))) %>% 
@@ -689,5 +725,37 @@ s2n<- function() {
   return(df)
 }
 
+get_common_sequence <- function(out) {
+  drug_index <- data.frame(drug = 1:15, 
+                           drug_code = c("AMP", "AM", "CEC", "CTX", "ZOX", "CXM", 
+                                         "CRO", "AMC", "CAZ", "CTT", "SAM", "CPR",
+                                         "CPD", "TZP", "FEP"))
+  df <- out %>%
+    filter(quadmut==FALSE, 
+           totalres==FALSE) %>% 
+    distinct(ep_number, action_number, train_input, replicate, .keep_all = TRUE) %>%
+    left_join(drug_index, by = 'drug')%>%
+    group_by(ep_number, replicate, train_input) %>% 
+    summarise(drug_sequence = paste(drug_code, collapse = ",")) %>% 
+    ungroup() %>% 
+    group_by(drug_sequence, replicate, train_input) %>% 
+    summarise(n = n()) %>%
+    ungroup() %>% 
+    group_by(replicate, train_input) %>%
+    slice_max(n=1, order_by = n, with_ties = FALSE)
+  return(df)
+  
+}
 
+define_landscape_graph <- function() {
+  opp_ls <- compute_opp_ls(c("CTX", "AMP", "CPR", "SAM", "TZP"))
+  opp_landscape <- Landscape(ls = opp_ls, N=as.integer(4), sigma=0.5)
+  tm = opp_landscape$get_TM()
+  tm = t(tm)
+  g <- igraph::graph_from_adjacency_matrix(tm, weighted = TRUE)
+  g <- set_vertex_attr(g, name = "val", value = unlist(opp_ls))
+  g <- as_tbl_graph(g)
+  
+  return(g)
+}
 

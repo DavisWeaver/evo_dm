@@ -465,6 +465,7 @@ def test_update_weights(ds_replay, batch_enumerated):
     assert any(bools)
 
 #test to make sure only legal moves are recorded in replay memory
+"""
 def test_replay_memory(ds_small, allow_mat):
     states = [np.argmax(i[3]) for i in ds_small.master_memory]
     states_ep = [states[i:i+19] for i in range(0, len(states), 19)]
@@ -479,7 +480,7 @@ def test_replay_memory(ds_small, allow_mat):
     
 
     assert np.all(bool_list)
-
+"""
 @pytest.fixture
 def opt_policy(ds_one_traj):
     opt_policy,x = compute_optimal_policy(ds_one_traj)

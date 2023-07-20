@@ -312,7 +312,7 @@ def allow_mat():
 def test_allowable_states(allow_mat):
     env = evol_env(N=3,dense=False)
     states = []
-    for i in range(100):
+    for i in range(1000):
         env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
         env.step()
         state = np.argmax(env.state_vector)
@@ -329,7 +329,7 @@ def test_allowable_states(allow_mat):
 def test_allowable_states_dense(allow_mat):
     env = evol_env(N=3,dense=True)
     states = []
-    for i in range(100):
+    for i in range(1000):
         env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
         env.step()
         state = np.argmax(env.state_vector)

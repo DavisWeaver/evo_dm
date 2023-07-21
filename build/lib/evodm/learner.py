@@ -60,6 +60,7 @@ class hyperparameters:
     def __init__(self):
         # Model training settings
         self.REPLAY_MEMORY_SIZE = 10000
+        self.MASTER_MEMORY = True
         self.MIN_REPLAY_MEMORY_SIZE = 1000
         self.MINIBATCH_SIZE = 100  
         self.UPDATE_TARGET_EVERY = 310 #every 500 steps, update the target
@@ -200,12 +201,13 @@ class DrugSelector:
         if self.env.action_number !=1:
             self.replay_memory.append(self.env.sensor)
             #update master memory - for diagnostic purposes only
-            if self.env.TRAIN_INPUT == "fitness":
-                #want to save the state vector history somewhere, regardless of what we use for training. 
-                self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor, self.env.state_vector, self.env.fitness])
-            else:
-                self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor, self.env.fitness]) #also record real fitness instead of sensor fitness
-      # Trains main network every step during episode
+            if self.master_memory:
+                if self.env.TRAIN_INPUT == "fitness":
+                    #want to save the state vector history somewhere, regardless of what we use for training. 
+                    self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor, self.env.state_vector, self.env.fitness])
+                else:
+                    self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor, self.env.fitness]) #also record real fitness instead of sensor fitness
+        # Trains main network every step during episode
       #gonna chunk this out so I can actually test it
     def train(self):
 
@@ -351,10 +353,11 @@ class DrugSelector:
     #function to get q vector for a given state
     def get_qs(self):
         if self.hp.TRAIN_INPUT == "state_vector":
-            tens = self.env.state_vector.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
+            state_vector = np.array(self.env.state_vector)
+            tens = state_vector.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
         elif self.hp.TRAIN_INPUT == "fitness":
             #convert all
-            sensor = self.env.sensor[3]
+            sensor = np.array(self.env.sensor[3])
             tens = sensor.reshape(-1, *self.env.ENVIRONMENT_SHAPE)
         elif self.hp.TRAIN_INPUT == "pop_size":
             tens = self.env.pop_size.reshape(-1, *self.env.ENVIRONMENT_SHAPE)

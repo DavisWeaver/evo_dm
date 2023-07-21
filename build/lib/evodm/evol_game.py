@@ -173,9 +173,9 @@ class evol_env:
         elif self.TRAIN_INPUT == "fitness":
             #convert fitness + action into trainable state vector for n and n+1
             prev_action_cat, action_cat = self.convert_fitness(fitness = sensor_fitness)
-            self.sensor= [np.array(prev_action_cat), 
+            self.sensor= [prev_action_cat, 
                             self.action, self.calc_reward(fitness = fitness), 
-                            np.array(action_cat)] 
+                            action_cat] 
         elif self.TRAIN_INPUT == "pop_size":
             ##Here we interpolate between the previous fitness and the next fitness
             pop_size = self.growth_curve(new_fitness = fitness)
@@ -351,7 +351,11 @@ def generate_landscapes(N = 5, sigma = 0.5, correl = np.linspace(-1.0,1.0,51),
                         dense = False, CS = False, num_drugs = 4):
 
     A = Landscape(N, sigma, dense = dense)
-    Bs = A.generate_correlated_landscapes(correl)
+    #give it two chances at this step because sometimes it doesn't converge
+    try:
+        Bs = A.generate_correlated_landscapes(correl)
+    except:
+        Bs = A.generate_correlated_landscapes(correl)
 
     if CS: 
         #this code guarantees that high-level CS will be present 

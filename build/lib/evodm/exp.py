@@ -13,7 +13,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
                   noise = False, noise_modifier = 1, num_drugs = 4, 
                   sigma = 0.5, normalize_drugs = True, 
                   player_wcutoff = -1, pop_wcutoff = 2, win_threshold = 200,
-                  win_reward = 0, standard_practice = False, drugs = "none",
+                  win_reward = 0, standard_practice = False, drugs = None,
                   average_outcomes = False, mira = False, gamma = 0.99,
                   learning_rate = 0.0001, minibatch_size = 60, 
                   pre_trained = False, wf = False,
@@ -24,7 +24,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
                   update_target_every = 310, total_resistance = False, 
                   starting_genotype = 0, train_freq = 100, 
                   compute_implied_policy_bool = False,
-                  dense = False):
+                  dense = False, master_memory = True):
     """
     evol_deepmind is the main function that initializes and trains a learner to switch between n drugs
     to try and minimize the fitness of a population evolving on a landscape.
@@ -112,6 +112,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
     hp.GEN_PER_STEP = int(gen_per_step)
     hp.POP_SIZE = int(pop_size)
     hp.DENSE = dense
+    hp.MASTER_MEMORY = master_memory
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes
@@ -255,7 +256,7 @@ def format_rl_fit(platefile, save_folder, prev_action, agent):
 #naive_rewards= evol_deepmind(naive = True)
 
 def mdp_mira_sweep(num_evals, episodes = 10, num_steps = 20, normalize_drugs = False):
-    '''
+    '''mast
     Function to evaluate performance of the MDP optimal for different discount_rates (gamma)
     Args:
         num_evals: int

@@ -241,10 +241,17 @@ def test_normalize_landscapes(example_landscapes):
     mins = [np.min(drug) >= 0 for drug in drugs] 
     assert all([mins, maxes])
 
+def test_normalize_landscapes2():
+    landscapes,drugs = generate_landscapes()
+    drugs = normalize_landscapes(drugs)
+    maxes = [np.max(drug) <= 1 for drug in drugs]
+    mins = [np.min(drug) >= 0 for drug in drugs] 
+    assert all([mins, maxes])
+
 
 #need a test to make sure we can compute total resistance across a panel. 
 def test_total_resistance(env_total_resistance):
-    assert isinstance(env_total_resistance.fitness - 1, np.float)
+    assert isinstance(env_total_resistance.fitness - 1, float)
 
 @pytest.fixture
 def mira_env():
@@ -288,3 +295,50 @@ def test_init_dense():
 def test_generate_landscapes():
     landscapes, drugs = generate_landscapes(N=4, sigma=0.5, correl = np.linspace(-1.0,1.0,51), dense=False, CS=True, num_drugs=4)
 
+@pytest.fixture
+def allow_mat():
+    allow_mat = {
+        0:(0,1,2,4),
+        1:(0,1,3,5),
+        2:(0,2,3,6),
+        3:(1,2,3,7),
+        4:(0,4,5,6),
+        5:(1,4,5,7),
+        6:(2,4,6,7),
+        7:(3,5,6,7)
+    }
+    return allow_mat
+
+def test_allowable_states(allow_mat):
+    env = evol_env(N=3,dense=False)
+    states = []
+    for i in range(1000):
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+        state = np.argmax(env.state_vector)
+        states.append(state)
+
+    bool_list = []
+    for j in range(len(states)):
+        if j != len(states)-1: #don't do this step for the last step in the counter
+            bool_j = states[j+1] in allow_mat[states[j]]
+            bool_list.append(bool_j)
+    
+    assert np.all(bool_list)
+
+def test_allowable_states_dense(allow_mat):
+    env = evol_env(N=3,dense=True)
+    states = []
+    for i in range(1000):
+        env.action = random.randint(np.min(env.ACTIONS),np.max(env.ACTIONS))
+        env.step()
+        state = np.argmax(env.state_vector)
+        states.append(state)
+
+    bool_list = []
+    for j in range(len(states)):
+        if j != len(states)-1: #don't do this step for the last step in the counter
+            bool_j = states[j+1] in allow_mat[states[j]]
+            bool_list.append(bool_j)
+    
+    assert np.all(bool_list)

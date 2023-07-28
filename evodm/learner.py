@@ -201,7 +201,7 @@ class DrugSelector:
         if self.env.action_number !=1:
             self.replay_memory.append(self.env.sensor)
             #update master memory - for diagnostic purposes only
-            if self.master_memory:
+            if self.hp.MASTER_MEMORY:
                 if self.env.TRAIN_INPUT == "fitness":
                     #want to save the state vector history somewhere, regardless of what we use for training. 
                     self.master_memory.append([self.env.episode_number, self.env.action_number, self.env.sensor, self.env.state_vector, self.env.fitness])

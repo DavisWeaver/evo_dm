@@ -342,3 +342,18 @@ def test_allowable_states_dense(allow_mat):
             bool_list.append(bool_j)
     
     assert np.all(bool_list)
+
+def test_delay():
+    env = evol_env(delay=1)
+    env.step()
+    assert len(env.sensor) ==0
+    env.step()
+    assert len(env.sensor) >0
+    env2 = evol_env(delay=0)
+    env2.step()
+
+#verify that true state doesn't match up with the state in the sensor
+#def test_delay2():
+
+
+

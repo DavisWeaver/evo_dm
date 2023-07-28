@@ -33,7 +33,8 @@ class evol_env:
                         average_outcomes = False, 
                         total_resistance = False,
                         starting_genotype = 0, 
-                        dense= False, cs = False):
+                        dense= False, cs = False, 
+                        delay = 0):
         #define switch for whether to record the state vector or fitness for the learner
         self.TRAIN_INPUT = train_input
         #define environmental variables
@@ -57,7 +58,10 @@ class evol_env:
         self.NOISE_BOOL = add_noise
         self.AVERAGE_OUTCOMES = average_outcomes
 
-
+        #measurement delay (i.e. are state vector readings delayed by n time steps)
+        self.DELAY = delay
+        if self.DELAY > 0:
+            self.state_mem = []
         #data structure for containing information the agent queries from the environment.
         # the format is: [previous_fitness, current_action, reward, next_fitness]
         self.sensor =  []
@@ -99,6 +103,8 @@ class evol_env:
         else:
             self.state_vector  = np.zeros((2**N,1))
             self.state_vector[starting_genotype][0] = 1
+
+        self.update_state_mem(state_vector = self.state_vector)
 
         ##Define initial fitness
         self.fitness = [np.dot(self.drugs[self.action-1], self.state_vector)]
@@ -152,7 +158,7 @@ class evol_env:
         self.time_step += self.NUM_EVOLS
         self.action_number += 1
         self.update_target_counter +=1
-
+        
         # Run the sim under the assigned conditions
         if self.action not in self.ACTIONS:
             return("the action must be in env.ACTIONS")
@@ -160,16 +166,58 @@ class evol_env:
                                         state_vector = self.state_vector,
                                         ls = self.landscapes[self.action-1], 
                                         average_outcomes=self.AVERAGE_OUTCOMES)
+        
+        
+        self.update_state_mem(state_vector = state_vector)
+
         if self.NOISE_BOOL:
             sensor_fitness = self.add_noise(fitness)
         else:
             sensor_fitness = fitness
 
+        self.define_sensor(fitness=fitness, sensor_fitness=sensor_fitness, 
+                           state_vector=state_vector)
         
+        #update vcount
+        self.update_vcount(fitness = fitness)
+
+        #update the current fitness vector
+        self.fitness = fitness
+        self.sensor_fitness = sensor_fitness
+        #update the current state vector
+        self.state_vector = state_vector
+        #update action-1 - its assumed that self.action is updated prior to initiating env.step
+        self.prev_action = float(self.action) #type conversion
+
+        #done
+        return
+    
+    def update_state_mem(self, state_vector):
+        if self.DELAY >0:
+            if self.TRAIN_INPUT == "fitness":
+                return("measurement delay only supported when train input is state_vector")
+            self.state_mem.append(state_vector)
+        return
+    
+    def define_sensor(self, fitness, sensor_fitness, state_vector):
         # Again, this is creating a stacked data structure where each time point provides
-        # [current_fitness, current_action, reward, next_fitness]
+        # [current_state, current_action, reward, next_state]
+        # [s_t, a_t, r_t, s_t+1]
+        # if self.delay > 0, this list will look like:
+        # [s_{t-delay}, a_t, r_t, s_{t-delay+1}]
+
+        if self.DELAY > 0 and len(self.state_mem) <= self.DELAY+1:
+            return              
         if self.TRAIN_INPUT == "state_vector":
-            self.sensor = [self.state_vector, self.action, self.calc_reward(fitness = fitness), state_vector]
+            if self.DELAY > 0:
+                index = self.time_step-1 - self.DELAY #because time step is 1 indexed
+                state1 = self.state_mem[index] 
+                state2 = self.state_mem[index + 1]
+            else:
+                state1 = self.state_vector 
+                state2 = state_vector 
+            
+            self.sensor = [state1, self.action, self.calc_reward(fitness = fitness), state2]
         elif self.TRAIN_INPUT == "fitness":
             #convert fitness + action into trainable state vector for n and n+1
             prev_action_cat, action_cat = self.convert_fitness(fitness = sensor_fitness)
@@ -185,21 +233,6 @@ class evol_env:
         else:
             print("please specify either state_vector, fitness, or pop_size for train_input when initializing the environment")
             return
-        
-        #update vcount
-        self.update_vcount(fitness = fitness)
-
-        #update the current fitness vector
-        self.fitness = fitness
-        self.sensor_fitness = sensor_fitness
-        #update the current state vector
-        self.state_vector = state_vector
-
-        #update action-1 - its assumed that self.action is updated prior to initiating env.step
-        self.prev_action = float(self.action) #type conversion
-
-        #done
-        return
 
     def convert_fitness(self, fitness): 
         #convert to lists
@@ -315,6 +348,9 @@ class evol_env:
     def reset(self):
         ##re-initialize state vector
         ##initialize state vector
+        if self.DELAY > 0:
+            self.state_mem = []
+
         if self.RANDOM_START:
             self.state_vector = np.ones((2**self.N,1))/2**self.N
         else:

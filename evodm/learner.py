@@ -65,6 +65,7 @@ class hyperparameters:
         self.MINIBATCH_SIZE = 100  
         self.UPDATE_TARGET_EVERY = 310 #every 500 steps, update the target
         self.TRAIN_INPUT = "state_vector"
+        self.DELAY = 0
         
         # Exploration settings
         self.DISCOUNT = 0.99  
@@ -152,7 +153,8 @@ class DrugSelector:
                                 average_outcomes=self.hp.AVERAGE_OUTCOMES, 
                                 starting_genotype = self.hp.STARTING_GENOTYPE,
                                 total_resistance= self.hp.TOTAL_RESISTANCE,
-                                dense=self.hp.DENSE)
+                                dense=self.hp.DENSE,
+                                delay=self.hp.DELAY)
 
         # main model  # gets trained every step
         self.model = self.create_model()
@@ -197,8 +199,8 @@ class DrugSelector:
         return model
 
     def update_replay_memory(self):
-
-        if self.env.action_number !=1:
+        
+        if self.env.action_number > 1 + self.hp.DELAY:
             self.replay_memory.append(self.env.sensor)
             #update master memory - for diagnostic purposes only
             if self.hp.MASTER_MEMORY:

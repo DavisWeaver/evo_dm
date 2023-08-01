@@ -357,6 +357,9 @@ class evol_env:
             self.state_vector  = np.zeros((2**self.N,1))
             self.state_vector[self.STARTING_GENOTYPE][0] = 1
 
+        #reset time step
+        self.time_step=0
+
         #reset fitness vector and action number
         self.fitness = []
         self.action_number = 0

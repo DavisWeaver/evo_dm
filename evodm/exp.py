@@ -114,7 +114,7 @@ def evol_deepmind(savepath = None, num_evols = 1, N = 5, episodes = 50,
     hp.POP_SIZE = int(pop_size)
     hp.DENSE = dense
     hp.MASTER_MEMORY = master_memory
-    hp.DELAY=delay
+    hp.DELAY= int(delay)
 
     #gotta modulate epsilon decay based on the number of episodes defined
     #0.005 = epsilon_decay^episodes

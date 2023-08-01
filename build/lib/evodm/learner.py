@@ -65,6 +65,7 @@ class hyperparameters:
         self.MINIBATCH_SIZE = 100  
         self.UPDATE_TARGET_EVERY = 310 #every 500 steps, update the target
         self.TRAIN_INPUT = "state_vector"
+        self.DELAY = 0
         
         # Exploration settings
         self.DISCOUNT = 0.99  
@@ -152,7 +153,8 @@ class DrugSelector:
                                 average_outcomes=self.hp.AVERAGE_OUTCOMES, 
                                 starting_genotype = self.hp.STARTING_GENOTYPE,
                                 total_resistance= self.hp.TOTAL_RESISTANCE,
-                                dense=self.hp.DENSE)
+                                dense=self.hp.DENSE,
+                                delay=self.hp.DELAY)
 
         # main model  # gets trained every step
         self.model = self.create_model()
@@ -197,8 +199,8 @@ class DrugSelector:
         return model
 
     def update_replay_memory(self):
-
-        if self.env.action_number !=1:
+        
+        if self.env.action_number > 1 + self.hp.DELAY:
             self.replay_memory.append(self.env.sensor)
             #update master memory - for diagnostic purposes only
             if self.hp.MASTER_MEMORY:
@@ -458,12 +460,12 @@ def practice(agent, naive = False, standard_practice = False,
     #format is [average_reward, min_reward, max_reward]
     reward_list = []
     #initialize list of per episode rewards
-    ep_rewards = []
+    #ep_rewards = []
     count=1
     for episode in tqdm(range(1, agent.hp.EPISODES + 1), ascii=True, unit='episodes', 
                         disable = True if any([dp_solution, naive, pre_trained]) else False):
         # Restarting episode - reset episode reward and step number
-        episode_reward = 0
+        #episode_reward = 0
         if pre_trained:
             agent.hp.epsilon = 0
 
@@ -511,8 +513,8 @@ def practice(agent, naive = False, standard_practice = False,
             #we don't save anything - it stays in the class
             agent.env.step()
 
-            reward = agent.env.sensor[2]
-            episode_reward += reward
+            #reward = agent.env.sensor[2]
+            #episode_reward += reward
 
             # Every step we update replay memory and train main network - only train if we are doing a not naive run
             agent.update_replay_memory()
@@ -530,13 +532,13 @@ def practice(agent, naive = False, standard_practice = False,
             count +=1 #keep track of total number of time steps that pass
 
         # Append episode reward to a list and log stats (every given number of episodes)
-        ep_rewards.append(episode_reward)
+        #ep_rewards.append(episode_reward)
         if not episode % agent.hp.AGGREGATE_STATS_EVERY or episode == 1:
-            average_reward = sum(
-                ep_rewards[-agent.hp.AGGREGATE_STATS_EVERY:])/len(ep_rewards[-agent.hp.AGGREGATE_STATS_EVERY:])
-            min_reward = min(ep_rewards[-agent.hp.AGGREGATE_STATS_EVERY:])
-            max_reward = max(ep_rewards[-agent.hp.AGGREGATE_STATS_EVERY:])
-            reward_list.append([episode, average_reward, min_reward, max_reward])
+          #  average_reward = sum(
+           #     ep_rewards[-agent.hp.AGGREGATE_STATS_EVERY:])/len(ep_rewards[-agent.hp.AGGREGATE_STATS_EVERY:])
+           # min_reward = min(ep_rewards[-agent.hp.AGGREGATE_STATS_EVERY:])
+           # max_reward = max(ep_rewards[-agent.hp.AGGREGATE_STATS_EVERY:])
+           # reward_list.append([episode, average_reward, min_reward, max_reward])
 
             #update the implied policy vector
             if not any([dp_solution, naive, pre_trained]):

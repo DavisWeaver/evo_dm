@@ -36,3 +36,7 @@ def test_evol_deepmind_sparse():
     agent = out[2]
     assert agent.env.landscapes[0].get_TM().size < 4**agent.env.N
     assert len(agent.master_memory) == 50
+
+def test_evol_deepmind_delay():
+    out = evol_deepmind(train_input = "state_vector", delay = 1, mira=True, 
+                        num_drugs=15, N=4, normalize_drugs=False, episodes = 5)

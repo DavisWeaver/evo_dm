@@ -355,5 +355,12 @@ def test_delay():
 #verify that true state doesn't match up with the state in the sensor
 #def test_delay2():
 
+def test_num_evols():
+    env = evol_env(num_evols=2, train_input='fitness')
+    env.step()
+    assert len(env.sensor) == 0
+    env.step()
+    assert len(env.sensor) > 0
+
 
 

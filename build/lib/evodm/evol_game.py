@@ -219,6 +219,8 @@ class evol_env:
             
             self.sensor = [state1, self.action, self.calc_reward(fitness = fitness), state2]
         elif self.TRAIN_INPUT == "fitness":
+            if self.NUM_EVOLS > 1 and self.time_step ==self.NUM_EVOLS: #otherwise the prev_fitness and fitness objects won't share the same shape.
+                return
             #convert fitness + action into trainable state vector for n and n+1
             prev_action_cat, action_cat = self.convert_fitness(fitness = sensor_fitness)
             self.sensor= [prev_action_cat, 

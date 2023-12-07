@@ -18,6 +18,11 @@ def test_mdp_mira_sweep():
     bools_list = list(chain.from_iterable(bools_list))
     assert any(bools_list)
 
+def test_evol_deepmind_phenom():
+    #make sure the phenom landscapes don't crash everything
+    out = evol_deepmind(train_input = 'fitness', episodes=5, num_drugs=15, N=4, 
+                        mira=True, normalize_drugs=False, phenom=20)
+
 def test_evol_deepmind_wf():
     #just make sure it runs quietly at a minimum
     out = evol_deepmind(wf = True, train_input='fitness', episodes=5, 

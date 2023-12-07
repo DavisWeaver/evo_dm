@@ -91,6 +91,7 @@ class hyperparameters:
         self.NUM_DRUGS = 4
         self.MIRA = True
         self.TOTAL_RESISTANCE = False
+        self.PHENOM = 0
         #wright-fisher controls
         self.WF = False
         self.POP_SIZE = 10000
@@ -154,7 +155,8 @@ class DrugSelector:
                                 starting_genotype = self.hp.STARTING_GENOTYPE,
                                 total_resistance= self.hp.TOTAL_RESISTANCE,
                                 dense=self.hp.DENSE,
-                                delay=self.hp.DELAY)
+                                delay=self.hp.DELAY, 
+                                phenom=self.hp.PHENOM)
 
         # main model  # gets trained every step
         self.model = self.create_model()
@@ -229,7 +231,7 @@ class DrugSelector:
         
         # Now we need to enumerate our batches
         X,y = self.enumerate_batch(minibatch = minibatch, future_qs_list = future_qs_list, 
-                                   current_qs_list= current_qs_list)
+                                   current_qs_list = current_qs_list)
                                    
         self.model.fit(X, y, batch_size=self.hp.MINIBATCH_SIZE, 
                        verbose=0, shuffle=False, callbacks=None)
@@ -381,7 +383,8 @@ def compute_optimal_policy(agent, discount_rate = 0.99, num_steps = 20):
     '''
 
     env = dp_env(N = agent.env.N, sigma = agent.env.sigma, 
-                 drugs = agent.env.drugs, num_drugs= len(agent.env.drugs))
+                 drugs = agent.env.drugs, num_drugs= len(agent.env.drugs),
+                 phenom = agent.env.PHENOM)
     
     policy, V = backwards_induction(env = env, discount_rate= discount_rate, num_steps=num_steps)
 

@@ -149,7 +149,7 @@ class Landscape:
         return adjMut
         
             
-    def get_TM_phenom(self, phenom, store=False):
+    def get_TM_phenom(self, phenom, store=True):
         """
         Returns the transition matrix for this landscape, with phenomenological stepping (see Tan and Gore 2012). If store=True, it will
         be saved in a field of this object (TM) for later use. If a stored copy already

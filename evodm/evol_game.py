@@ -71,10 +71,10 @@ class evol_env:
         self.DENSE= dense
         self.CS = cs
         self.num_drugs = num_drugs
+        self.PHENOM = phenom
        
         #Defining these in case self.reset is called
         self.correl = correl
-        self.phenom = phenom
 
         #define victory counters
         self.player_wcount = 0
@@ -145,8 +145,11 @@ class evol_env:
             self.drugs = normalize_landscapes(self.drugs)
             self.landscapes = [Landscape(ls = i, N=self.N, sigma = self.sigma,
                                          dense = self.DENSE) for i in self.drugs]
-        
-        [i.get_TM() for i in self.landscapes] #pre-compute TM
+        #if self.PHENOM > 0:
+        #    [i.get_TM_phenom(phenom = self.PHENOM) for i in self.landscapes]
+        #else:
+        #    [i.get_TM() for i in self.landscapes] #pre-compute TM
+        [i.get_TM_phenom(phenom = self.PHENOM) for i in self.landscapes]
         
         return 
 

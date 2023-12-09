@@ -20,7 +20,7 @@ class dp_env:
     """
     def __init__(self, N, sigma, 
                  correl = np.linspace(-1.0,1.0,51), 
-                 num_drugs = 4, drugs = None, noinit = False):
+                 num_drugs = 4, drugs = None, noinit = False, phenom = 0):
         #define the drugs if there aren't any
         if drugs is None:
             ## Generate landscapes - use whatever parameters were set in main()
@@ -35,8 +35,11 @@ class dp_env:
         #define the landscapes
         landscapes = [Landscape(ls = i, N=N, sigma = sigma, dense = False) for i in drugs]
         #get the transition matrix for each landscape
-        self.tm = [i.get_TM() for i in landscapes]
-        
+        #if phenom > 0:
+         #   self.tm = [i.get_TM_phenom(phenom) for i in landscapes]
+        #else: 
+         #   self.tm = [i.get_TM() for i in landscapes]
+        self.tm = [i.get_TM_phenom(phenom) for i in landscapes]
         #get number of states
         self.nS = pow(2,N)
         self.nA = num_drugs

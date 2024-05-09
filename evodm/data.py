@@ -1,3 +1,60 @@
+import pandas as pd
+
+def clean_seascapes():
+    drugs = ['paclitaxel', 'gefitinib', 'osimertinib', 'savolatinib']
+    file = '../../../evodm_cancer/data/combined_'
+    def process_genotype(Y):
+        genotypes = []
+        for y in Y:
+            if y == "parental":
+                genotypes.append("0000")
+            else:
+                key = {'BRAF': '0001', #define the key for processing text of genotypes.
+                       'KRAS': '0010',
+                       'EGFR': '0100',
+                       'PIK3CA': '1000'}
+                
+                split_y = y.split('+') #split input into list of text-encoded genotypes
+                genotype_long = [bin(int(key[x], 2)) for x in split_y]
+                genotype = bin(sum(int(x, 2) for x in genotype_long))[2:] #sum the binary values of the genotypes
+                if len(genotype) < 4:
+                    genotype = genotype.rjust(4, '0')
+                genotypes.append(genotype)
+
+        return genotypes
+    
+    def compute_fitness(df):
+         ref = df[df['genotype'] == '0000']
+         ref = ref.rename(columns = {'luminescence': 'ref_luminescence'}).drop(columns = ['genotype'])
+         df = df.merge(ref, on='concentration')
+         df['fitness'] = df['luminescence'] / df['ref_luminescence']
+         return df
+
+    dfs = []
+    for drug in drugs:
+        filed = file + drug + '.xlsx' 
+        df = pd.read_excel(filed)
+        try: 
+           df = df.drop(columns = 'cond')
+        except: 
+            pass
+        df = pd.melt(df, id_vars=['cell'], var_name='concentration', value_name='luminescence')
+        df['concentration'] = df['concentration'].str.replace('nM', '') #convert concentration to numeric
+        df['concentration'] = df['concentration'].str.replace('DMSO', '0')
+        df['concentration'] = df['concentration'].astype(float)
+
+        df['genotype'] = process_genotype(df['cell'])
+        df = df.groupby(['genotype', 'concentration']).mean().reset_index()
+        df = compute_fitness(df)
+        df['drug'] = drug 
+        dfs.append(df) 
+
+    df = pd.concat(dfs)
+    
+    final_file = file + 'seascapes_cleaned.csv'
+    df.to_csv(final_file, index=False)
+    return df
+    
 ################################################Ignore below here unless you like looking at data structures #########################
 def get_example_drug(N=5):
 

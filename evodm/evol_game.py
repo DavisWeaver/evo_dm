@@ -1,4 +1,5 @@
 from evodm.landscapes import Landscape
+from evodm.data import load_seascapes
 import numpy as np
 from tensorflow.keras.utils import to_categorical
 import math
@@ -151,8 +152,8 @@ class evol_env:
         #    [i.get_TM() for i in self.landscapes] #pre-compute TM
         [i.get_TM_phenom(phenom = self.PHENOM) for i in self.landscapes]
         
-        return 
-
+        return
+ 
 
     def step(self):
 
@@ -536,6 +537,7 @@ def define_mira_landscapes(as_dict = False):
         drugs.append([2.679, 2.906, 2.427, 0.141, 3.038, 3.309, 2.528, 0.143, 2.709, 2.5, 0.172, 0.093, 2.453, 2.739, 0.609, 0.171])     #TZP
         drugs.append([2.59, 2.572, 2.393, 2.832, 2.44, 2.808, 2.652, 0.611, 2.067, 2.446, 2.957, 2.633, 2.735, 2.863, 2.796, 3.203])     #FEP
     return drugs
+
 
 #Function to compute reward for a given simulation step - used by the environment class. 
 #Could have defined this in-line but made it a separate function in case we want to make it 

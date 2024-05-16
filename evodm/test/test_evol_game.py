@@ -1,5 +1,6 @@
 from evodm import evol_env, generate_landscapes, normalize_landscapes, run_sim
 from evodm.evol_game import discretize_state, define_mira_landscapes, evol_env_wf
+from evodm.data import define_dag_seascapes
 import pytest
 import numpy.testing as npt
 import numpy as np
@@ -53,6 +54,10 @@ def env_noise():
     env_noise = env
     return env_noise
 
+@pytest.fixture
+def env_seascapes():
+    env = evol_env(normalize_drugs=True, random_start = False, num_evols =1,
+                   add_noise=False, drugs = define_dag_seascapes())
 #tests to make sure noise is being encoded properly
 def test_noise1(env_noise):
     assert env_noise.sensor_fitness != env_noise.fitness

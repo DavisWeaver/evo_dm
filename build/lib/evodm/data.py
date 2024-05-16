@@ -1,3 +1,122 @@
+import pandas as pd
+import os
+
+def clean_seascapes():
+    drugs = ['paclitaxel', 'gefitinib', 'osimertinib', 'savolatinib']
+    
+    def process_genotype(Y):
+        genotypes = []
+        for y in Y:
+            if y == "parental":
+                genotypes.append("0000")
+            else:
+                key = {'BRAF': '0001', #define the key for processing text of genotypes.
+                       'KRAS': '0010',
+                       'EGFR': '0100',
+                       'PIK3CA': '1000'}
+                
+                split_y = y.split('+') #split input into list of text-encoded genotypes
+                genotype_long = [bin(int(key[x], 2)) for x in split_y]
+                genotype = bin(sum(int(x, 2) for x in genotype_long))[2:] #sum the binary values of the genotypes
+                if len(genotype) < 4:
+                    genotype = genotype.rjust(4, '0')
+                genotypes.append(genotype)
+
+        return genotypes
+    
+    def compute_fitness(df):
+         #Function to compute the fitness of each genotype at each concentration in a given drug relative to the wild type.
+         ref = df[df['genotype'] == '0000']
+         ref = ref.rename(columns = {'luminescence': 'ref_luminescence'}).drop(columns = ['genotype'])
+         df = df.merge(ref, on='concentration')
+         df['fitness'] = df['luminescence'] / df['ref_luminescence']
+         return df
+    
+    def rank_conc(df):
+        #Function to add the concentration rank to the dataframe to use instead of absolute concentration. 
+        concs = pd.unique(df['concentration'])
+        concs.sort() #make sure they are in ascending order. 
+        ranks = [i + 1 for i in range(len(concs))]
+        #create a dataframe with just the unique concentration values for a given drug
+        df_ranks = pd.DataFrame(concs)
+        df_ranks['rank'] = ranks
+        df_ranks.columns = ['concentration', 'conc_rank']
+        #merge the rank dataframe with the original dataframe
+        df = df.merge(df_ranks, on='concentration')
+        return df
+
+    dfs = []
+
+
+    file = '../../../evodm_cancer/data/combined_'
+   
+    for drug in drugs:
+        filed = file + drug + '.xlsx' 
+        try:
+            df = pd.read_excel(filed)
+        except:
+            df = pd.read_csv(filed.replace("../../../", "../../"))
+        try: 
+           df = df.drop(columns = 'cond')
+        except: 
+            pass
+        df = pd.melt(df, id_vars=['cell'], var_name='concentration', value_name='luminescence')
+        df['concentration'] = df['concentration'].str.replace('nM', '') #convert concentration to numeric
+        df['concentration'] = df['concentration'].str.replace('DMSO', '0')
+        df['concentration'] = df['concentration'].astype(float)
+
+        df['genotype'] = process_genotype(df['cell'])
+        df = df.groupby(['genotype', 'concentration']).mean().reset_index()
+        df = compute_fitness(df)
+        df['drug'] = drug 
+
+        df = rank_conc(df)
+        dfs.append(df) 
+
+    df = pd.concat(dfs)
+    
+    final_file = file + 'seascapes_cleaned.csv'
+    df.to_csv(final_file, index=False)
+    return df
+    
+#Convenience function to load the seascapes data
+def load_seascapes(file='../../../evodm_cancer/data/combined_seascapes_cleaned.csv'):
+    try:
+        df = pd.read_csv(file, dtype = {'genotype': str})
+    except:
+        clean_seascapes()
+        df = pd.read_csv(file, dtype = {'genotype': str})
+    return df
+
+def define_dag_seascapes():
+    
+    #load the data
+    df = load_seascapes()
+    df = df[df['drug'] != 'paclitaxel'] #get rid of the drug paclitaxel just for now  because it is missing some key data
+    #setup reference variables 
+    drugs = pd.unique(df['drug'])
+    concs = pd.unique(df['conc_rank'])
+    
+    #iterate through drugs 
+    ls_i = dict.fromkeys(drugs)
+    for i in drugs:
+        df_i = df[df['drug'] == i]
+        ls_j = {}
+        #iterate through concentrations -
+        #absolute concentrations were not standardized between drugs. do we need to just use the rank order of concentration?
+        for j in concs:
+            df_j = df_i[df_i['conc_rank'] == j]
+            #ls_g = dict.fromkeys(genotypes)
+           # for g in range(len(df_j)):
+            #    ls_g[df_j['genotype'].iloc[g]] = df_j['fitness'].iloc[g]
+            fitness = df_j['fitness'].tolist()
+            ls_j[j] = fitness
+        ls_i[i] = ls_j
+
+    return ls_i
+    
+    #iterate through drug, cAoncentration combos to generate appropriate dictionaries for landscapes
+        
 ################################################Ignore below here unless you like looking at data structures #########################
 def get_example_drug(N=5):
 

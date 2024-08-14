@@ -233,8 +233,7 @@ def format_plate(day1=True, platepath = '', agentpath = '', savefolder = '',
 
     return out
     
-
-
+    
 def format_rl_fit(platefile, save_folder, prev_action, agent):
     '''
     Function to generate dict with RL_fit drug recommendations at correct coordinates

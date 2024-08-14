@@ -1,5 +1,4 @@
 from evodm.landscapes import Landscape
-from evodm.data import load_seascapes
 import numpy as np
 from tensorflow.keras.utils import to_categorical
 import math
@@ -24,6 +23,7 @@ class evol_env:
                         train_input = "state_vector", num_evols = 1,
                         random_start = False, 
                         num_drugs = 4, 
+                        num_conc = 10,
                         normalize_drugs = True, 
                         win_threshold = 10,
                         player_wcutoff = 0.8, 
@@ -35,7 +35,8 @@ class evol_env:
                         total_resistance = False,
                         starting_genotype = 0, 
                         dense= False, cs = False, 
-                        delay = 0):
+                        delay = 0,
+                        seascapes = False):
         #define switch for whether to record the state vector or fitness for the learner
         self.TRAIN_INPUT = train_input
         #define environmental variables
@@ -47,17 +48,13 @@ class evol_env:
         self.NUM_EVOLS = num_evols #number of evolutionary steps per sample
         self.NUM_OBS = 100 #number of "OD" readings per evolutionary step 
         self.pop_size = []  
-        #define actions  
-        self.ACTIONS = [i for i in range(1, num_drugs + 1)] # action space - added the plus one because I decided to use 1 indexing for the actions for no good reason a while ago
-        self.action = 1 #first action - value will be updated by the learner
-        self.prev_action = 1.0 #pretend this is the second time seeing it why not
-        self.update_target_counter = 0
-        
 
         #should noise be introduced into the fitness readings?
         self.NOISE_MODIFIER = noise_modifier
         self.NOISE_BOOL = add_noise
         self.AVERAGE_OUTCOMES = average_outcomes
+        self.SEASCAPES = seascapes
+        self.num_conc = num_conc
 
         #measurement delay (i.e. are state vector readings delayed by n time steps)
         self.DELAY = delay
@@ -95,8 +92,12 @@ class evol_env:
         #should each episode start with a random scatter of genotypes?
         self.RANDOM_START = random_start
         self.TOTAL_RESISTANCE = total_resistance
+       
 
+        #define landscapes
         self.define_landscapes(drugs=drugs, normalize_drugs=normalize_drugs)
+        #define action space and initial action.
+        self.define_actions()
 
         ##initialize state vector
         if self.RANDOM_START:
@@ -122,8 +123,20 @@ class evol_env:
         elif self.TRAIN_INPUT == "pop_size":
             self.ENVIRONMENT_SHAPE = (self.NUM_OBS, 1)
         else:
-                print("please specify state_vector, pop_size, or fitness for train_input when initializing the environment")
-                return
+            print("please specify state_vector, pop_size, or fitness for train_input when initializing the environment")
+            return
+
+    def define_actions(self):
+        #define the action space - this is a list of integers that the agent can take
+        #in the environment in the landscapes case. 
+        #In the seascapes case, actions are a tuple of (dose, drug) pairs
+        if self.SEASCAPES:
+            self.actions = [(i,j) for i in self.drugs.keys() for j in range(self.num_conc)]
+            self.action = ('gefitinib',0) #first action - value will be updated by the learner
+        else:
+            self.ACTIONS = [i for i in range(1, self.num_drugs + 1)]
+            self.action = 1 #first action - value will be updated by the learner
+            self.prev_action = 1.0 #pretend this is the second time seeing it why not
 
     def define_landscapes(self, drugs, normalize_drugs):
         #default behavior is to generate landscapes completely at random. 
@@ -133,24 +146,35 @@ class evol_env:
             self.landscapes, self.drugs = generate_landscapes(N = self.N, 
                                                   sigma = self.sigma,
                                                   num_drugs = self.num_drugs,
-                                                  correl=self.correl, dense = self.DENSE,
+                                                  correl=self.correl, 
+                                                  dense = self.DENSE,
                                                   CS=self.CS)
-            
+       
         else:
-            self.drugs = drugs #use pre-defined drugs 
-            self.landscapes = [Landscape(ls = i, N=self.N, sigma = self.sigma, 
-                                         dense = self.DENSE) for i in self.drugs]
-
+            self.drugs = drugs
         #Normalize landscapes if directed
         if normalize_drugs:
-            self.drugs = normalize_landscapes(self.drugs)
-            self.landscapes = [Landscape(ls = i, N=self.N, sigma = self.sigma,
-                                         dense = self.DENSE) for i in self.drugs]
-        #if self.PHENOM > 0:
-        #    [i.get_TM_phenom(phenom = self.PHENOM) for i in self.landscapes]
-        #else:
-        #    [i.get_TM() for i in self.landscapes] #pre-compute TM
-        [i.get_TM_phenom(phenom = self.PHENOM) for i in self.landscapes]
+            self.drugs = normalize_landscapes(self.drugs, 
+                                              seascapes = self.SEASCAPES)
+        if self.SEASCAPES:
+        #In this case, their are two variables that define a landscape (dose, drug) instead of just drug
+            self.landscapes = {}
+            for i in drugs.keys():
+                self.landscapes[i] = [Landscape(ls = drugs[i][j], N=self.N, 
+                                        sigma = self.sigma, dense = self.DENSE) 
+                                        for j in drugs[i]]
+                #precompute the transition matrices
+                self.landscapes[i] = [self.landscapes[i][j].get_TM_phenom(phenom = self.PHENOM) 
+                                      for j in range(len(self.landscapes[i]))]
+                
+        else:
+            self.landscapes = [Landscape(ls = i, N=self.N, sigma = self.sigma, 
+                                        dense = self.DENSE) for i in self.drugs]
+            #if self.PHENOM > 0:
+            #    [i.get_TM_phenom(phenom = self.PHENOM) for i in self.landscapes]
+            #else:
+            #    [i.get_TM() for i in self.landscapes] #pre-compute TM
+            [i.get_TM_phenom(phenom = self.PHENOM) for i in self.landscapes]
         
         return
  
@@ -426,13 +450,20 @@ def generate_landscapes2(N=4, sigma=0.5, num_drugs=4, CS = False, dense = False,
     drugs = [i.ls for i in landscapes]
     return landscapes, drugs
 
-def normalize_landscapes(drugs):
-    drugs_normalized = []
-    for i in range(len(drugs)): 
-        # this should transform everthing so the fitness range is 0-1 for all landscapes
-        drugs_i = drugs[i] - np.min(drugs[i])
-        drugs_normalized.append(drugs_i / np.max(drugs_i))
-        
+def normalize_landscapes(drugs, seascapes = False):
+    if seascapes:
+        for i in drugs.keys():
+            for j in drugs[i].keys(): 
+                drugs[i][j] = drugs[i][j] - np.min(drugs[i][j])
+                drugs[i][j] = drugs[i][j] / np.max(drugs[i][j])
+        drugs_normalized = drugs
+    else:
+        drugs_normalized = []
+        for i in range(len(drugs)): 
+            # this should transform everthing so the fitness range is 0-1 for all landscapes
+            drugs_i = drugs[i] - np.min(drugs[i])
+            drugs_normalized.append(drugs_i / np.max(drugs_i))
+            
     return drugs_normalized
 #function to progress the sim by n steps (using the evol_steps parameter)
 # Naive is a logical flag - set true to run the simulation in a naive case 

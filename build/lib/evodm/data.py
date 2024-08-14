@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+from scipy.stats import zscore
 
 def clean_seascapes():
     drugs = ['paclitaxel', 'gefitinib', 'osimertinib', 'savolatinib']
@@ -33,8 +34,7 @@ def clean_seascapes():
          return df
     
     def rank_conc(df):
-        #Function to add the concentration rank to the dataframe to use instead of absolute concentration. 
-        concs = pd.unique(df['concentration'])
+        #Function to add eee(df['concentration'])
         concs.sort() #make sure they are in ascending order. 
         ranks = [i + 1 for i in range(len(concs))]
         #create a dataframe with just the unique concentration values for a given drug
@@ -60,6 +60,7 @@ def clean_seascapes():
            df = df.drop(columns = 'cond')
         except: 
             pass
+        df.apply(zscore, dtype = )
         df = pd.melt(df, id_vars=['cell'], var_name='concentration', value_name='luminescence')
         df['concentration'] = df['concentration'].str.replace('nM', '') #convert concentration to numeric
         df['concentration'] = df['concentration'].str.replace('DMSO', '0')
@@ -88,10 +89,10 @@ def load_seascapes(file='../../../evodm_cancer/data/combined_seascapes_cleaned.c
         df = pd.read_csv(file, dtype = {'genotype': str})
     return df
 
-def define_dag_seascapes():
+def define_dag_seascapes(file):
     
     #load the data
-    df = load_seascapes()
+    df = load_seascapes(file = file)
     df = df[df['drug'] != 'paclitaxel'] #get rid of the drug paclitaxel just for now  because it is missing some key data
     #setup reference variables 
     drugs = pd.unique(df['drug'])

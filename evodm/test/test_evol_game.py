@@ -56,8 +56,9 @@ def env_noise():
 
 @pytest.fixture
 def env_seascapes():
-    env = evol_env(normalize_drugs=True, random_start = False, num_evols =1,
-                   add_noise=False, drugs = define_dag_seascapes())
+    drugs = define_dag_seascapes(file='../../../../evodm_cancer/data/combined_seascapes_cleaned.csv')
+    env_seascapes = evol_env(normalize_drugs=True, random_start = False, num_evols =1,
+                   add_noise=False, drugs = drugs, seascapes = True)
 #tests to make sure noise is being encoded properly
 def test_noise1(env_noise):
     assert env_noise.sensor_fitness != env_noise.fitness

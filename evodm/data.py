@@ -60,7 +60,7 @@ def clean_seascapes():
            df = df.drop(columns = 'cond')
         except: 
             pass
-        df.apply(zscore, dtype = )
+        #df.apply(zscore, dtype = )
         df = pd.melt(df, id_vars=['cell'], var_name='concentration', value_name='luminescence')
         df['concentration'] = df['concentration'].str.replace('nM', '') #convert concentration to numeric
         df['concentration'] = df['concentration'].str.replace('DMSO', '0')

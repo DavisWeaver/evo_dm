@@ -40,6 +40,7 @@ class evol_env:
         #define switch for whether to record the state vector or fitness for the learner
         self.TRAIN_INPUT = train_input
         #define environmental variables
+        self.update_target_counter = 0
         self.time_step = 0 #define for number of evolutionary steps counter
         self.action_number = 0 #define number of actions being taken
         self.episode_number = 1 #count the number of times through a given fitness paradigm we are going
